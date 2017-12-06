@@ -66,7 +66,26 @@ Usage
 pydtc Tool
 ----------
 
-The python device tree converter **pydtc** is partly a replacement of the device tree compiler tool [**dtc**](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
+The python device tree converter **pydtc** is a tool for conversion *.dts to *.dtb and vice versa. Is distributed
+together with **pyfdt** module. This tool can be used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
+
+```bash
+  $ pydtc -?
+
+Usage: pydtc [OPTIONS] COMMAND [ARGS]...
+
+  Device Tree Converter (DTC) is a tool for converting device tree binary
+  blob (*.dtb) to readable text file (*.dts) and reverse
+
+Options:
+  -v, --version  Show the version and exit.
+  -?, --help     Show this message and exit.
+
+Commands:
+  todtb  Convert *.dts to *.dtb
+  todts  Convert *.dtb to *.dts
+```
+
 
 #### $ pydtc todts OUTFILE INFILE
 
@@ -82,8 +101,8 @@ Convert Device Tree in binary blob (*.dtb) to readable text file (*.dts)
 ##### Example:
 
 ``` bash
-  $ pydtc todts output.dts input.dtb                                                                                               
-
+  $ pydtc todts output.dts input.dtb
+    
     DTS saved as: output.dts
 ```
 
@@ -105,7 +124,7 @@ Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
 ##### Example:
 
 ``` bash
-  $ pydtc todtb -v 17 output.dtb input.dts                                                                                               
-
+  $ pydtc todtb -v 17 output.dtb input.dts
+  
     DTB saved as: output.dtb
 ```

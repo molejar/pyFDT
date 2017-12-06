@@ -43,10 +43,10 @@ setup(
         'Topic :: Utilities'
     ],
     description='Open Source library for manipulating with Device Tree image',
-    py_modules=['dtc'],
+    py_modules=['pydtc'],
     entry_points={
         'console_scripts': [
-            'pydtc = dtc:main'
+            'pydtc = pydtc:main'
         ],
     }
 )
