@@ -26,8 +26,7 @@ VERSION = pyfdt.__version__
 
 # Short description of DTC tool
 DESCRIP = (
-    "Device Tree Converter (DTC) is a tool for converting device tree binary blob (*.dtb) to readable text file (*.dts)"
-    " and reverse"
+    "Device Tree Converter tool for converting FDT blob (*.dtb) to readable text file (*.dts) and reverse"
 )
 
 

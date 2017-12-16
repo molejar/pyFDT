@@ -70,7 +70,8 @@ def get_version_info(text):
 
 
 def strip_comments(text):
-    return re.sub('//.*?(\r\n?|\n)|/\*.*?\*/', '', text, flags=re.S)
+    text = re.sub('//.*?(\r\n?|\n)|/\*.*?\*/', '', text, flags=re.S)
+    return text
 
 
 def split_to_lines(text):

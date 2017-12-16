@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from struct import unpack_from, pack
-
 from .head import Header
 from .prop import Property, PropBytes, PropWords, PropStrings
 from .node import Node, Nop
@@ -105,6 +103,8 @@ class FDT(object):
         """Export FDT Object into Binary Blob format (DTB)"""
         if self.rootnode is None:
             return None
+
+        from struct import pack
 
         if version is not None:
             self.header.version = version
@@ -219,6 +219,8 @@ def parse_dts(text):
 
 def parse_dtb(data):
     """ Parse FDT Binary Blob and create FDT Object """
+    from struct import unpack_from
+
     fdt = FDT()
     # parse header
     fdt.header = Header.parse(data)

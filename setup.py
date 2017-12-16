@@ -15,13 +15,11 @@
 # limitations under the License.
 
 import sys
-from setuptools import setup, find_packages
+import pyfdt
+from setuptools import setup
 
 if sys.version_info[0] == 2:
     sys.exit('Sorry, Python 2.x is not supported')
-
-sys.path.insert(0, './src')
-import pyfdt
 
 setup(
     name='pyfdt',
@@ -31,9 +29,9 @@ setup(
     author_email='martin.olejar@gmail.com',
     url='https://github.com/molejar/pyFDT',
     platforms="Mac OSX, Windows, Linux",
+    description='Open Source library for manipulating with Device Tree image',
     install_requires=['click>=5.0'],
-    packages=find_packages('src'),
-    package_dir={'':'src'},
+    packages=['pyfdt'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
@@ -42,11 +40,9 @@ setup(
         'Topic :: Software Development :: Embedded Systems',
         'Topic :: Utilities'
     ],
-    description='Open Source library for manipulating with Device Tree image',
-    py_modules=['pydtc'],
     entry_points={
         'console_scripts': [
-            'pydtc = pydtc:main'
+            'pydtc = pyfdt.tool:main'
         ],
     }
 )

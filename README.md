@@ -1,8 +1,10 @@
-# pyFDT: Flattened Device Tree Python Module 
+# Flattened Device Tree Python Module 
+
+This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
+created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/doc/imxsb.md)
 
 > Some parts in this module have been reused from https://github.com/superna9999/pyfdt project.
 
-This python module is usable for manipulation with Device Tree Data.
 
 Dependencies
 ------------
@@ -63,8 +65,8 @@ Usage
         f.write(fdt.to_dtb(version=17))
 ```
 
-pydtc Tool
-----------
+[ pydtc ] Tool
+--------------
 
 The python device tree converter **pydtc** is a tool for conversion *.dts to *.dtb and vice versa. Is distributed
 together with **pyfdt** module. This tool can be used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
