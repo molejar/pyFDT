@@ -67,7 +67,7 @@ class Node(object):
 
     def __str__(self):
         """String representation"""
-        return "Node: {}".format(self.name)
+        return "{}".format(self.name)
 
     def __getitem__(self, index):
         """Get subnodes, returns either a Node, a Property or a Nop"""
@@ -77,7 +77,7 @@ class Node(object):
         """Set node at index, replacing previous subnode,
            must not be a duplicate name
         """
-        if self.subdata[index].name != subnode.name and self.__find_name(subnode.name) is not None:
+        if self.subdata[index].name != subnode.name and self.get_index_by_name(subnode.name, type(subnode)) is not None:
             raise Exception("{} : {} subnode already exists".format(self, subnode))
         if not isinstance(subnode, (Nop, Node, Property)):
             raise Exception("Invalid object type")
@@ -110,18 +110,16 @@ class Node(object):
         if curnames != cmpnames:
             return False
         for subnode in [subnode for subnode in self.subdata if not isinstance(subnode, Nop)]:
-            index = node.index(subnode.name)
+            index = node.index(subnode)
             if subnode != node[index]:
                 return False
         return True
 
-    def __find_name(self, name):
-        """Find name in subnodes"""
-        index = 0
-        for data in self.subdata:
-            if not isinstance(data, Nop) and data.name == name:
+    def get_index_by_name(self, item_name, item_type=None):
+        """ Get index value of existing item type and name """
+        for index, item in enumerate(self.subdata):
+            if (item_type is None or type(item) is item_type) and item.name == item_name:
                 return index
-            index += 1
         return None
 
     def set_parent_node(self, node):
@@ -134,40 +132,40 @@ class Node(object):
         """Get parent node"""
         return self.parent
 
-    def append(self, subnode):
+    def append(self, item):
         """Append subnode, same as add_subnode"""
-        if self.__find_name(subnode.name) is not None:
-            raise Exception("{} : {} subnode already exists".format(self, subnode))
-        if not isinstance(subnode, (Nop, Node, Property)):
+        if not isinstance(item, (Node, Property, Nop)):
             raise Exception("Invalid object type")
-        self.subdata.append(subnode)
+        if self.get_index_by_name(item.name, type(item)) is not None:
+            raise Exception("{}: {} item already exists".format(self, item))
+        self.subdata.append(item)
 
     def pop(self, index=-1):
         """Remove and returns subnode at index, default the last"""
         return self.subdata.pop(index)
 
-    def insert(self, index, subnode):
+    def insert(self, index, item):
         """Insert subnode before index, must not be a duplicate name"""
-        if self.__find_name(subnode.name) is not None:
-            raise Exception("{} : {} subnode already exists".format(self, subnode))
-        if not isinstance(subnode, (Nop, Node, Property)):
+        if not isinstance(item, (Node, Property, Nop)):
             raise Exception("Invalid object type")
-        self.subdata.insert(index, subnode)
+        if self.get_index_by_name(item.name, type(item)) is not None:
+            raise Exception("{}: {} item already exists".format(self, item))
+        self.subdata.insert(index, item)
 
-    def remove(self, name):
-        """Remove subnode with the name
+    def remove(self, item):
+        """Remove item from node
            Raises ValueError if not present
         """
-        index = self.__find_name(name)
+        index = self.get_index_by_name(item.name, type(item))
         if index is None:
             raise ValueError("Not present")
         return self.subdata.pop(index)
 
-    def index(self, name):
-        """Returns position of subnode with the name
+    def index(self, item):
+        """Returns position of the item
            Raises ValueError if not present
         """
-        index = self.__find_name(name)
+        index = self.get_index_by_name(item.name, type(item))
         if index is None:
             raise ValueError("Not present")
         return index
@@ -180,7 +178,7 @@ class Node(object):
             raise Exception("Can only merge with a Node Object !")
 
         for subnode in [obj for obj in node if isinstance(obj, (Node, Property))]:
-            index = self.__find_name(subnode.name)
+            index = self.get_index_by_name(subnode.name, type(subnode))
             if index is None:
                 dup = deepcopy(subnode)
                 if isinstance(subnode, Node):
@@ -191,38 +189,9 @@ class Node(object):
             else:
                 self.subdata[index] = copy(subnode)
 
-    def walk(self):
-        """Walk into subnodes and yield paths and objects
-           Returns set with (path string, node object)
-        """
-        node = self
-        hist = []
-        index = -1
-        start = 0
-        curpath = []
-
-        while True:
-            for index in range(start, len(node)):
-                if isinstance(node[index], (Node, Property)):
-                    yield ('/' + '/'.join(curpath + [node[index].name]), node[index])
-                if isinstance(node[index], Node):
-                    if len(node[index]):
-                        hist.append((node, index+1))
-                        curpath.append(node[index].name)
-                        node = node[index]
-                        start = 0
-                        index = -1
-                        break
-            if index >= 0:
-                if len(hist):
-                    (node, start) = hist.pop()
-                    curpath.pop()
-                else:
-                    break
-
     def to_dts(self, tabsize=4, depth=0):
         """Get NODE in string representation"""
-        content = ('\n').join([sub.to_dts(tabsize, depth + 1) for sub in self.subdata])
+        content = '\n'.join([sub.to_dts(tabsize, depth + 1) for sub in self.subdata])
         content += '\n' if content else ''
         dts = "\n"
         dts += line_offset(tabsize, depth, self.name + ' {\n')
@@ -232,7 +201,6 @@ class Node(object):
 
     def to_dtb(self, strings, pos=0, version=17):
         """Get NODE in binary blob representation"""
-        #strings = blob_str
         if self.name == '/':
             blob = pack('>II', DTB_BEGIN_NODE, 0)
         else:
@@ -246,4 +214,4 @@ class Node(object):
             blob += data
         pos += 4
         blob += pack('>I', DTB_END_NODE)
-        return (blob, strings, pos)
+        return blob, strings, pos

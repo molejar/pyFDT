@@ -204,7 +204,7 @@ def parse_dts(text):
                     prop_obj = PropBytes(prop_name)
                     prop_value = prop_value.replace('[', '').replace(']', '')
                     for prop in prop_value.split():
-                        prop_obj.append(int(prop, 0))
+                        prop_obj.append(int(prop, 16))
                 else:
                     prop_obj = PropStrings(prop_name)
                     for prop in prop_value.split('",'):
