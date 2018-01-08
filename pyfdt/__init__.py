@@ -13,9 +13,9 @@
 # limitations under the License.
 
 from .head import Header
-from .prop import Property, PropBytes, PropWords, PropStrings
-from .node import Node, Nop
-from .misc import *
+from .prop import Property, PropBytes, PropWords, PropStrings, DTB_PROP
+from .node import Node, Nop, DTB_BEGIN_NODE, DTB_END_NODE, DTB_NOP
+from .misc import strip_comments, split_to_lines, get_version_info, extract_string
 
 __author__ = 'Martin Olejar <martin.olejar@gmail.com>'
 __version__ = '0.1.0'
@@ -33,6 +33,9 @@ __all__ = [
     'parse_dts',
     'parse_dtb'
 ]
+
+# DTB constants
+DTB_END = 0x9
 
 
 class FDT(object):

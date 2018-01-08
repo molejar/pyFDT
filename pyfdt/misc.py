@@ -15,18 +15,8 @@
 import re
 from string import printable
 
-FDT_MAX_VERSION = 17
 
-# DTB constants
-DTB_HEADER_MAGIC = 0xD00DFEED
-DTB_BEGIN_NODE = 0x1
-DTB_END_NODE = 0x2
-DTB_PROP = 0x3
-DTB_NOP = 0x4
-DTB_END = 0x9
-
-
-def isstring(data):
+def is_string(data):
     """ Check property string validity """
     if not len(data):
         return None
@@ -35,7 +25,10 @@ def isstring(data):
     pos = 0
     while pos < len(data):
         posi = pos
-        while pos < len(data) and data[pos] != 0 and data[pos] in printable.encode() and data[pos] not in (ord('\r'), ord('\n')):
+        while pos < len(data) and \
+              data[pos] != 0 and \
+              data[pos] in printable.encode() and \
+              data[pos] not in (ord('\r'), ord('\n')):
             pos += 1
         if data[pos] != 0 or pos == posi:
             return None

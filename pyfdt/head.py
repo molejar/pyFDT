@@ -13,16 +13,20 @@
 # limitations under the License.
 
 from struct import unpack_from, pack
-from .misc import *
 
 
 class Header(object):
+
     MIN_SIZE = 4 * 7
     MAX_SIZE = 4 * 10
 
+    MAX_VERSION = 17
+
+    MAGIC_NUMBER = 0xD00DFEED
+
     @property
     def magic(self):
-        return self._magic
+        return self.MAGIC_NUMBER
 
     @property
     def version(self):
@@ -52,7 +56,6 @@ class Header(object):
 
     def __init__(self):
         # private variables
-        self._magic = DTB_HEADER_MAGIC
         self._version = None
         self._size = 0
         self._padding = 0
@@ -73,6 +76,7 @@ class Header(object):
     def info(self):
         nfo = 'FDT Header:'
         nfo += '- Version: {}'.format(self.version)
+        nfo += '- Size:    {}'.format(self.size)
         return nfo
 
     @classmethod
@@ -82,11 +86,11 @@ class Header(object):
             raise ValueError("Error ...")
 
         header_vals = unpack_from('>7I', data, offset)
-        if header_vals[0] != DTB_HEADER_MAGIC:
+        if header_vals[0] != cls.MAGIC_NUMBER:
             raise Exception('Invalid Magic')
-        if header_vals[5] > FDT_MAX_VERSION:
+        if header_vals[5] > cls.MAX_VERSION:
             raise Exception('Invalid Version {}'.format(header_vals[5]))
-        if header_vals[6] > FDT_MAX_VERSION - 1:
+        if header_vals[6] > cls.MAX_VERSION - 1:
             raise Exception('Invalid last compatible Version {}'.format(header_vals[6]))
 
         header = cls()

@@ -72,8 +72,8 @@ def todtb(outfile, infiles, version, lcversion, cpuid):
     try:
         fdt = None
 
-        if version is not None and version > pyfdt.FDT_MAX_VERSION:
-            raise Exception("DTB Version must be lover or equal {} !".format(pyfdt.FDT_MAX_VERSION))
+        if version is not None and version > pyfdt.Header.MAX_VERSION:
+            raise Exception("DTB Version must be lover or equal {} !".format(pyfdt.Header.MAX_VERSION))
 
         if not isinstance(infiles, (list, tuple)):
             infiles = [infiles]

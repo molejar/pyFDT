@@ -13,7 +13,11 @@
 # limitations under the License.
 
 from struct import unpack, pack
-from .misc import printable, isstring, line_offset, DTB_PROP
+from string import printable
+from .misc import is_string, line_offset
+
+# DTB constants
+DTB_PROP = 0x3
 
 
 class Property(object):
@@ -67,7 +71,7 @@ class Property(object):
     @classmethod
     def create(cls, name, raw_value):
         """ Instantiate property with raw value type """
-        if isstring(raw_value):
+        if is_string(raw_value):
             obj = PropStrings(name)
             # Extract strings from raw value
             for st in raw_value.decode('ascii').split('\0'):

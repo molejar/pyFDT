@@ -14,9 +14,15 @@
 
 from copy import deepcopy, copy
 from struct import pack
+from string import printable
 
 from .prop import Property
-from .misc import *
+from .misc import line_offset
+
+# DTB constants
+DTB_BEGIN_NODE = 0x1
+DTB_END_NODE = 0x2
+DTB_NOP = 0x4
 
 
 class Nop(object):
@@ -73,15 +79,15 @@ class Node(object):
         """Get subnodes, returns either a Node, a Property or a Nop"""
         return self.subdata[index]
 
-    def __setitem__(self, index, subnode):
-        """Set node at index, replacing previous subnode,
-           must not be a duplicate name
+    def __setitem__(self, index, item):
+        """Set node at index, replacing previous subnode, must not be a duplicate name
         """
-        if self.subdata[index].name != subnode.name and self.get_index_by_name(subnode.name, type(subnode)) is not None:
-            raise Exception("{} : {} subnode already exists".format(self, subnode))
-        if not isinstance(subnode, (Nop, Node, Property)):
+        if not isinstance(item, (Nop, Node, Property)):
             raise Exception("Invalid object type")
-        self.subdata[index] = subnode
+        dupl_index = self.get_index_by_name(item.name, type(item))
+        if dupl_index is not None and dupl_index != index:
+            raise Exception("{}: \"{}\" item already exists".format(self, item.name))
+        self.subdata[index] = item
 
     def __len__(self):
         """Get strings count"""
@@ -137,7 +143,7 @@ class Node(object):
         if not isinstance(item, (Node, Property, Nop)):
             raise Exception("Invalid object type")
         if self.get_index_by_name(item.name, type(item)) is not None:
-            raise Exception("{}: {} item already exists".format(self, item))
+            raise Exception("{}: \"{}\" item already exists".format(self, item.name))
         self.subdata.append(item)
 
     def pop(self, index=-1):
@@ -149,7 +155,7 @@ class Node(object):
         if not isinstance(item, (Node, Property, Nop)):
             raise Exception("Invalid object type")
         if self.get_index_by_name(item.name, type(item)) is not None:
-            raise Exception("{}: {} item already exists".format(self, item))
+            raise Exception("{}: \"{}\" item already exists".format(self, item.name))
         self.subdata.insert(index, item)
 
     def remove(self, item):
