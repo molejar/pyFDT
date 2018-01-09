@@ -14,6 +14,13 @@
 
 from struct import unpack_from, pack
 
+# DTB constants
+DTB_BEGIN_NODE = 0x1
+DTB_END_NODE = 0x2
+DTB_PROP = 0x3
+DTB_NOP = 0x4
+DTB_END = 0x9
+
 
 class Header(object):
 

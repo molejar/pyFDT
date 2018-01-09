@@ -14,10 +14,9 @@
 
 from struct import unpack, pack
 from string import printable
-from .misc import is_string, line_offset
 
-# DTB constants
-DTB_PROP = 0x3
+from .head import DTB_PROP
+from .misc import is_string, line_offset
 
 
 class Property(object):

@@ -19,14 +19,14 @@ import pyfdt
 from setuptools import setup
 
 if sys.version_info[0] == 2:
-    sys.exit('Sorry, Python 2.x is not supported')
+    sys.exit('Sorry, Python 2.x is not supported !')
 
 setup(
     name='pyfdt',
     version=pyfdt.__version__,
-    license='Apache 2.0',
-    author='Martin Olejar',
-    author_email='martin.olejar@gmail.com',
+    license=pyfdt.__license__,
+    author=pyfdt.__author__,
+    author_email=pyfdt.__contact__,
     url='https://github.com/molejar/pyFDT',
     platforms="Mac OSX, Windows, Linux",
     description='Open Source library for manipulating with Device Tree image',

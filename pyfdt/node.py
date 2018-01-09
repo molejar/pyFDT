@@ -16,13 +16,9 @@ from copy import deepcopy, copy
 from struct import pack
 from string import printable
 
+from .head import DTB_NOP, DTB_BEGIN_NODE, DTB_END_NODE
 from .prop import Property
 from .misc import line_offset
-
-# DTB constants
-DTB_BEGIN_NODE = 0x1
-DTB_END_NODE = 0x2
-DTB_NOP = 0x4
 
 
 class Nop(object):

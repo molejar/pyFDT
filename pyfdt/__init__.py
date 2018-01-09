@@ -12,30 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .head import Header
-from .prop import Property, PropBytes, PropWords, PropStrings, DTB_PROP
-from .node import Node, Nop, DTB_BEGIN_NODE, DTB_END_NODE, DTB_NOP
+from .node import Node, Nop
+from .prop import Property, PropBytes, PropWords, PropStrings
+from .head import Header, DTB_BEGIN_NODE, DTB_END_NODE, DTB_NOP, DTB_PROP, DTB_END
 from .misc import strip_comments, split_to_lines, get_version_info, extract_string
 
-__author__ = 'Martin Olejar <martin.olejar@gmail.com>'
-__version__ = '0.1.0'
-__status__ = 'Development'
-__all__ = [
+__author__  = "Martin Olejar"
+__contact__ = "martin.olejar@gmail.com"
+__version__ = "0.1.0"
+__license__ = "Apache 2.0"
+__status__  = "Development"
+__all__     = [
     # FDT Classes
-    'PropStrings',
-    'PropWords',
-    'PropBytes',
-    'Header',
-    'Node',
-    'Nop',
     'FDT',
+    'Nop',
+    'Node',
+    'Header',
+    'PropBytes',
+    'PropWords',
+    'PropStrings',
     # core methods
     'parse_dts',
     'parse_dtb'
 ]
-
-# DTB constants
-DTB_END = 0x9
 
 
 class FDT(object):
