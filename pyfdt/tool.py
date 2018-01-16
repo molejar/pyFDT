@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import sys
 import click
 import pyfdt
@@ -67,7 +68,10 @@ def todts(outfile, infile, tabsize):
 @click.option('-v', '--version', type=click.INT, default=None, help="DTB Version")
 @click.option('-l', '--lcversion', type=click.INT, default=None, help="DTB Last Compatible Version")
 @click.option('-c', '--cpuid', type=click.INT, default=None, help="Boot CPU ID")
-def todtb(outfile, infiles, version, lcversion, cpuid):
+@click.option('-a', '--align', type=click.INT, default=None, help="Make the blob align to the <bytes>")
+@click.option('-p', '--padding', type=click.INT, default=None, help="Add padding to the blob of <bytes> long")
+@click.option('-s', '--size', type=click.INT, default=None, help="Make the blob at least <bytes> long")
+def todtb(outfile, infiles, version, lcversion, cpuid, align, padding, size):
     """ Convert *.dts to *.dtb """
     try:
         fdt = None
@@ -79,14 +83,34 @@ def todtb(outfile, infiles, version, lcversion, cpuid):
             infiles = [infiles]
         for file in infiles:
             with open(file, 'r') as f:
-                data = pyfdt.parse_dts(f.read())
+                data = pyfdt.parse_dts(f.read(), os.path.dirname(file))
             if fdt is None:
                 fdt = data
             else:
                 fdt.merge(data)
 
+        raw_data = fdt.to_dtb(version, lcversion, cpuid)
+
+        if align is not None:
+            if size is not None:
+                raise Exception("The \"-a/--align\" option can't be used together with \"-s/--size\"")
+            if not align % 2:
+                raise Exception("The \"-a/--align\" option must be dividable with two !")
+            if len(raw_data) % align:
+                raw_data += bytes([0] * (len(raw_data) % align))
+
+        if padding is not None:
+            if align is not None:
+                raise Exception("The \"-p/--padding\" option can't be used together with \"-a/--align\"")
+            raw_data += bytes([0] * padding)
+
+        if size is not None:
+            if size < len(raw_data):
+                raise Exception("The \"-s/--size\" option must be > {}".format(len(raw_data)))
+            raw_data += bytes([0] * (size - len(raw_data)))
+
         with open(outfile, 'wb') as f:
-            f.write(fdt.to_dtb(version, lcversion, cpuid))
+            f.write(raw_data)
 
     except Exception as e:
         click.echo(" ERROR: {}".format(str(e) if str(e) else "Unknown!"))

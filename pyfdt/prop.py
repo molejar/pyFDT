@@ -234,10 +234,10 @@ class PropWords(Property):
 class PropBytes(Property):
     """Property with bytes as value"""
 
-    def __init__(self, name, bytes=None):
+    def __init__(self, name, data=None):
         """Init with bytes"""
         super().__init__(name)
-        self.data = [] if bytes is None else bytes
+        self.data = bytearray() if data is None else bytearray(data)
 
     def __str__(self):
         """String representation"""
@@ -274,7 +274,7 @@ class PropBytes(Property):
         return self.data.pop(index)
 
     def clear(self):
-        self.data.clear()
+        self.data = bytearray()
 
     def to_dts(self, tabsize=4, depth=0):
         """Get DTS representation"""

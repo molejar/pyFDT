@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from .node import Node, Nop
 from .prop import Property, PropBytes, PropWords, PropStrings
 from .head import Header, DTB_BEGIN_NODE, DTB_END_NODE, DTB_NOP, DTB_PROP, DTB_END
@@ -139,7 +141,7 @@ class FDT(object):
         return blob_header + blob_entries + blob_data + blob_strings.encode('ascii')
 
 
-def parse_dts(text):
+def parse_dts(text, root_dir=''):
     """Parse DTS text file and create FDT Object"""
     ver = get_version_info(text)
     text = strip_comments(text)
@@ -207,6 +209,22 @@ def parse_dts(text):
                     prop_value = prop_value.replace('[', '').replace(']', '')
                     for prop in prop_value.split():
                         prop_obj.append(int(prop, 16))
+                elif prop_value.startswith('/incbin/'):
+                    prop_value = prop_value.replace('/incbin/("', '').replace('")', '')
+                    prop_value = prop_value.split(',')
+                    file_path  = os.path.join(root_dir, prop_value[0].strip())
+                    file_offset = int(prop_value.strip(), 0) if len(prop_value) > 1 else 0
+                    file_size = int(prop_value.strip(), 0) if len(prop_value) > 2 else 0
+                    if file_path is None or not os.path.exists(file_path):
+                        raise Exception("File path doesn't exist: {}".format(file_path))
+                    with open(file_path, "rb") as f:
+                        f.seek(file_offset)
+                        data = f.read(file_size) if file_size > 0 else f.read()
+                    prop_obj = PropBytes(prop_name, data)
+                elif prop_value.startswith('/plugin/'):
+                    raise NotImplementedError("Not implemented property value: /plugin/")
+                elif prop_value.startswith('/bits/'):
+                    raise NotImplementedError("Not implemented property value: /bits/")
                 else:
                     prop_obj = PropStrings(prop_name)
                     for prop in prop_value.split('",'):
