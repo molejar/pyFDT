@@ -121,6 +121,9 @@ Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
 * **-v, --version** - DTB Version
 * **-l, --lcversion** - DTB Last Compatible Version
 * **-c, --cpuid** - Boot CPU ID
+* **-a, --align** - Make the blob align to the <bytes>
+* **-p, --padding** - Add padding to the blob of <bytes> long
+* **-s, --size** - Make the blob at least <bytes> long
 * **-?, --help** - Show help message and exit
 
 ##### Example:

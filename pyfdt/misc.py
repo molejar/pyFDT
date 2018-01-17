@@ -56,9 +56,10 @@ def get_version_info(text):
         if line and line.startswith('/ {'):
             break
         if line and line.startswith('//'):
+            line = line.replace('//', '').replace(':', '')
             line = line.split()
-            if line[1] in ('version', 'last_comp_version', 'boot_cpuid_phys'):
-                ret[line[1]] = int(line[2], 0)
+            if line[0] in ('version', 'last_comp_version', 'boot_cpuid_phys'):
+                ret[line[0]] = int(line[1], 0)
     return ret
 
 
