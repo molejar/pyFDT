@@ -16,14 +16,14 @@
 
 import os
 import sys
+import fdt
 import click
-import pyfdt
 
 # Application error code
 ERROR_CODE = 1
 
 # The version of u-boot tools
-VERSION = pyfdt.__version__
+VERSION = fdt.__version__
 
 # Short description of DTC tool
 DESCRIP = (
@@ -49,10 +49,10 @@ def todts(outfile, infile, tabsize):
         with open(infile, 'rb') as f:
             data = f.read()
 
-        fdt = pyfdt.parse_dtb(data)
+        dt = fdt.parse_dtb(data)
 
         with open(outfile, 'w') as f:
-            f.write(fdt.to_dts(tabsize))
+            f.write(dt.to_dts(tabsize))
 
     except Exception as e:
         click.echo(" ERROR: {}".format(str(e) if str(e) else "Unknown!"))
@@ -74,22 +74,22 @@ def todts(outfile, infile, tabsize):
 def todtb(outfile, infiles, version, lcversion, cpuid, align, padding, size):
     """ Convert *.dts to *.dtb """
     try:
-        fdt = None
+        dt = None
 
-        if version is not None and version > pyfdt.Header.MAX_VERSION:
-            raise Exception("DTB Version must be lover or equal {} !".format(pyfdt.Header.MAX_VERSION))
+        if version is not None and version > fdt.Header.MAX_VERSION:
+            raise Exception("DTB Version must be lover or equal {} !".format(fdt.Header.MAX_VERSION))
 
         if not isinstance(infiles, (list, tuple)):
             infiles = [infiles]
         for file in infiles:
             with open(file, 'r') as f:
-                data = pyfdt.parse_dts(f.read(), os.path.dirname(file))
-            if fdt is None:
-                fdt = data
+                data = fdt.parse_dts(f.read(), os.path.dirname(file))
+            if dt is None:
+                dt = data
             else:
-                fdt.merge(data)
+                dt.merge(data)
 
-        raw_data = fdt.to_dtb(version, lcversion, cpuid)
+        raw_data = dt.to_dtb(version, lcversion, cpuid)
 
         if align is not None:
             if size is not None:
