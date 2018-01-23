@@ -14,24 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import pyfdt
-from setuptools import setup
 
+from setuptools import setup
+from fdt import __version__, __license__, __author__, __contact__
+
+# Check python version
+import sys
 if sys.version_info[0] == 2:
     sys.exit('Sorry, Python 2.x is not supported !')
 
 setup(
-    name='pyfdt',
-    version=pyfdt.__version__,
-    license=pyfdt.__license__,
-    author=pyfdt.__author__,
-    author_email=pyfdt.__contact__,
+    name='fdt',
+    author=__author__,
+    version=__version__,
+    license=__license__,
+    author_email=__contact__,
     url='https://github.com/molejar/pyFDT',
     platforms="Mac OSX, Windows, Linux",
-    description='Open Source library for manipulating with Device Tree image',
+    description='Open Source library for manipulation with Device Tree Blob',
     install_requires=['click>=5.0'],
-    packages=['pyfdt'],
+    packages=['fdt'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
@@ -42,7 +44,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'pydtc = pyfdt.tool:main'
+            'pydtc = fdt.tool:main'
         ],
     }
 )

@@ -117,6 +117,13 @@ class Node(object):
                 return False
         return True
 
+    def get_item_by_name(self, item_name, item_type=None):
+        """ Get index value of existing item type and name """
+        for item in self.subdata:
+            if (item_type is None or type(item) is item_type) and item.name == item_name:
+                return item
+        return None
+
     def get_index_by_name(self, item_name, item_type=None):
         """ Get index value of existing item type and name """
         for index, item in enumerate(self.subdata):
@@ -138,7 +145,7 @@ class Node(object):
         """Append subnode, same as add_subnode"""
         if not isinstance(item, (Node, Property, Nop)):
             raise Exception("Invalid object type")
-        if self.get_index_by_name(item.name, type(item)) is not None:
+        if self.get_item_by_name(item.name, type(item)) is not None:
             raise Exception("{}: \"{}\" item already exists".format(self, item.name))
         self.subdata.append(item)
 
@@ -150,7 +157,7 @@ class Node(object):
         """Insert subnode before index, must not be a duplicate name"""
         if not isinstance(item, (Node, Property, Nop)):
             raise Exception("Invalid object type")
-        if self.get_index_by_name(item.name, type(item)) is not None:
+        if self.get_item_by_name(item.name, type(item)) is not None:
             raise Exception("{}: \"{}\" item already exists".format(self, item.name))
         self.subdata.insert(index, item)
 

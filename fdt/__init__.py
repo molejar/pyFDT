@@ -146,15 +146,15 @@ def parse_dts(text, root_dir=''):
     ver = get_version_info(text)
     text = strip_comments(text)
     dts_lines = split_to_lines(text)
-    fdt = FDT()
+    dt = FDT()
     if 'version' in ver:
-        fdt.header.version = ver['version']
+        dt.header.version = ver['version']
     if 'last_comp_version' in ver:
-        fdt.header.last_comp_version = ver['last_comp_version']
+        dt.header.last_comp_version = ver['last_comp_version']
     if 'boot_cpuid_phys' in ver:
-        fdt.header.boot_cpuid_phys = ver['boot_cpuid_phys']
+        dt.header.boot_cpuid_phys = ver['boot_cpuid_phys']
     # parse entries
-    fdt.entries = []
+    dt.entries = []
     for line in dts_lines:
         if line.endswith('{'):
             break
@@ -163,17 +163,17 @@ def parse_dts(text, root_dir=''):
             line = line.split()
             if len(line) != 3 :
                 raise Exception()
-            fdt.entries.append({'address': int(line[1], 0), 'size': int(line[2], 0)})
+            dt.entries.append({'address': int(line[1], 0), 'size': int(line[2], 0)})
     # parse nodes
     curnode = None
-    fdt.rootnode = None
+    dt.rootnode = None
     for line in dts_lines:
         if line.endswith('{'):
             # start node
             node_name = line.split()[0]
             new_node = Node(node_name)
-            if fdt.rootnode is None:
-                fdt.rootnode = new_node
+            if dt.rootnode is None:
+                dt.rootnode = new_node
             if curnode is not None:
                 curnode.append(new_node)
                 new_node.set_parent_node(curnode)
@@ -186,10 +186,10 @@ def parse_dts(text, root_dir=''):
             # Nop
             if curnode is not None:
                 curnode.append(Nop())
-            elif fdt.rootnode is not None:
-                fdt.postnops.append(Nop())
+            elif dt.rootnode is not None:
+                dt.postnops.append(Nop())
             else:
-                fdt.prenops.append(Nop())
+                dt.prenops.append(Nop())
         else:
             # properties
             if line.find('=') == -1:
@@ -234,28 +234,28 @@ def parse_dts(text, root_dir=''):
             if curnode is not None:
                 curnode.append(prop_obj)
 
-    return fdt
+    return dt
 
 
 def parse_dtb(data):
     """ Parse FDT Binary Blob and create FDT Object """
     from struct import unpack_from
 
-    fdt = FDT()
+    dt = FDT()
     # parse header
-    fdt.header = Header.parse(data)
+    dt.header = Header.parse(data)
     # parse entries
-    offset = fdt.header.off_mem_rsvmap
+    offset = dt.header.off_mem_rsvmap
     aa = data[offset:]
     while True:
         entrie = dict(zip(('address', 'size'), unpack_from(">QQ", data, offset)))
         offset += 16
         if entrie['address'] == 0 and entrie['size'] == 0:
             break
-        fdt.entries.append(entrie)
+        dt.entries.append(entrie)
     # parse nodes
     curnode = None
-    offset = fdt.header.off_dt_struct
+    offset = dt.header.off_dt_struct
     while True:
         if len(data) < (offset + 4):
             raise Exception("Error ...")
@@ -267,8 +267,8 @@ def parse_dtb(data):
             offset = ((offset + len(node_name) + 4) & ~3)
             if not node_name: node_name = '/'
             new_node = Node(node_name)
-            if fdt.rootnode is None:
-                fdt.rootnode = new_node
+            if dt.rootnode is None:
+                dt.rootnode = new_node
             if curnode is not None:
                 curnode.append(new_node)
                 new_node.set_parent_node(curnode)
@@ -279,16 +279,16 @@ def parse_dtb(data):
         elif tag == DTB_NOP:
             if curnode is not None:
                 curnode.append(Nop())
-            elif fdt.rootnode is not None:
-                fdt.postnops.append(Nop())
+            elif dt.rootnode is not None:
+                dt.postnops.append(Nop())
             else:
-                fdt.prenops.append(Nop())
+                dt.prenops.append(Nop())
         elif tag == DTB_PROP:
             prop_size, prop_string_pos, = unpack_from(">II", data, offset)
             prop_start = offset + 8
-            if fdt.header.version < 16 and prop_size >= 8:
+            if dt.header.version < 16 and prop_size >= 8:
                 prop_start = ((prop_start + 7) & ~0x7)
-            prop_name = extract_string(data, fdt.header.off_dt_strings + prop_string_pos)
+            prop_name = extract_string(data, dt.header.off_dt_strings + prop_string_pos)
             prop_raw_value = data[prop_start: prop_start + prop_size]
             offset = prop_start + prop_size
             offset = ((offset + 3) & ~0x3)
@@ -299,4 +299,4 @@ def parse_dtb(data):
         else:
             raise Exception("Unknown Tag: {}".format(tag))
 
-    return fdt
+    return dt

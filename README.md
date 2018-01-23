@@ -31,7 +31,7 @@ In case of development, install it from cloned sources:
 
 **NOTE:** You may run into a permissions issues running these commands. Here are a few options how to fix it:
 
-1. Run with `sudo` to install pyIMX and dependencies globally
+1. Run with `sudo` to install `fdt` and dependencies globally
 2. Specify the `--user` option to install locally into your home directory (export "~/.local/bin" into PATH variable if haven't).
 3. Run the command in a [virtualenv](https://virtualenv.pypa.io/en/latest/) local to a specific project working set.
 
@@ -40,7 +40,7 @@ Usage
 -----
 
 ```python
-    import pyfdt
+    import fdt
     
     #-----------------------------------------------
     # convert *.dtb to *.dts
@@ -48,10 +48,10 @@ Usage
     with open("example.dtb", "rb") as f:
         dtb_data = f.read()
         
-    fdt = pyfdt.parse_dtb(dtb_data)
+    dt = fdt.parse_dtb(dtb_data)
     
     with open("example.dts", "w") as f:
-        f.write(fdt.to_dts())
+        f.write(dt.to_dts())
         
     #-----------------------------------------------
     # convert *.dts to *.dtb
@@ -59,17 +59,17 @@ Usage
     with open("example.dts", "r") as f:
         dts_text = f.read()
         
-    fdt = pyfdt.parse_dts(dts_text)
+    dt = fdt.parse_dts(dts_text)
     
     with open("example.dtb", "wb") as f:
-        f.write(fdt.to_dtb(version=17))
+        f.write(dt.to_dtb(version=17))
 ```
 
 [ pydtc ] Tool
 --------------
 
 The python device tree converter **pydtc** is a tool for conversion *.dts to *.dtb and vice versa. Is distributed
-together with **pyfdt** module. This tool can be used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
+together with **fdt** module. This tool can be used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
 
 ```bash
   $ pydtc -?
