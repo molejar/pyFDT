@@ -41,6 +41,8 @@ class Header(object):
 
     @version.setter
     def version(self, value):
+        if value > self.MAX_VERSION:
+            raise ValueError("Not supported version, use: 0 - 17 !")
         # update size and padding
         self._size = self.MIN_SIZE
         if value >= 2:

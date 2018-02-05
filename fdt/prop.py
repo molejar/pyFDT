@@ -28,14 +28,18 @@ class Property(object):
     @name.setter
     def name(self, value):
         if not isinstance(value, str):
-            raise Exception("The value must be a string type !")
+            raise ValueError("The value must be a string type !")
         if not all(c in printable for c in value):
-            raise Exception("The value must contain just printable chars !")
+            raise ValueError("The value must contain just printable chars !")
         self._name = value
 
     def __init__(self, name):
         """Init with name"""
         self.name = name
+
+    def __str__(self):
+        """String representation"""
+        return "{}".format(self.name)
 
     def __getitem__(self, value):
         """Returns No Items"""
@@ -48,18 +52,17 @@ class Property(object):
     def __eq__(self, prop):
         """Check properties are the same (same names) """
         if not isinstance(prop, Property):
-            raise Exception("Invalid object type")
+            return False
         if self.name != prop.name:
             return False
         return True
 
     def to_dts(self, tabsize=4, depth=0):
         """Get dts string representation"""
-        return line_offset(tabsize, depth, '{};'.format(self.name))
+        return line_offset(tabsize, depth, '{};\n'.format(self.name))
 
     def to_dtb(self, strings, pos=0, version=17):
         """Get blob representation"""
-        # print "%x:%s" % (pos, self)
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
             strpos = len(strings)
@@ -101,7 +104,7 @@ class PropStrings(Property):
 
     def __str__(self):
         """String representation"""
-        return "{} = Strings: {}".format(self.name, self.data)
+        return "{} = {}".format(self.name, self.data)
 
     def __len__(self):
         """Get strings count"""
@@ -114,21 +117,23 @@ class PropStrings(Property):
     def __eq__(self, prop):
         """Check properties are the same (same values)"""
         if not isinstance(prop, PropStrings):
-            raise Exception("Invalid object type")
+            return False
         if self.name != prop.name:
             return False
-        if self.__len__() != len(prop):
+        if len(self) != len(prop):
             return False
-        for index in range(self.__len__()):
+        for index in range(len(self)):
             if self.data[index] != prop[index]:
                 return False
         return True
 
     def append(self, value):
+        if not isinstance(value, str):
+            raise TypeError("Invalid object type")
         if len(value) == 0:
-            raise Exception("Invalid strings value")
+            raise ValueError("Invalid strings value")
         if not all(c in printable or c in ('\r', '\n') for c in value):
-            raise Exception("Invalid chars in strings value")
+            raise ValueError("Invalid chars in strings value")
         self.data.append(value)
 
     def pop(self, index):
@@ -143,7 +148,7 @@ class PropStrings(Property):
         result  = line_offset(tabsize, depth, self.name)
         result += ' = "'
         result += '", "'.join(self.data)
-        result += '";'
+        result += '";\n'
         return result
 
     def to_dtb(self, strings, pos=0, version=17):
@@ -188,19 +193,19 @@ class PropWords(Property):
     def __eq__(self, prop):
         """Check properties are the same (same values)"""
         if not isinstance(prop, PropWords):
-            raise Exception("Invalid object type")
+            return False
         if self.name != prop.name:
             return False
-        if self.__len__() != len(prop):
+        if len(self) != len(prop):
             return False
-        for index in range(self.__len__()):
+        for index in range(len(self)):
             if self.data[index] != prop[index]:
                 return False
         return True
 
     def append(self, value):
         if not 0 <= value <= 0xFFFFFFFF:
-            raise Exception("Invalid word value {}, requires <0 - 4294967295>".format(value))
+            raise ValueError("Invalid word value {}, requires <0 - 4294967295>".format(value))
         self.data.append(value)
 
     def pop(self, index):
@@ -215,7 +220,7 @@ class PropWords(Property):
         result  = line_offset(tabsize, depth, self.name)
         result += ' = <'
         result += ' '.join(["0x{:X}".format(word) for word in self.data])
-        result += ">;"
+        result += ">;\n"
         return result
 
     def to_dtb(self, strings, pos=0, version=17):
@@ -254,19 +259,19 @@ class PropBytes(Property):
     def __eq__(self, prop):
         """Check properties are the same (same values)"""
         if not isinstance(prop, PropBytes):
-            raise Exception("Invalid object type")
+            return False
         if self.name != prop.name:
             return False
-        if self.__len__() != len(prop):
+        if len(self) != len(prop):
             return False
-        for index in range(self.__len__()):
+        for index in range(len(self)):
             if self.data[index] != prop[index]:
                 return False
         return True
 
     def append(self, value):
         if not 0 <= value <= 0xFF:
-            raise Exception("Invalid byte value {}, requires <0 - 255>".format(value))
+            raise ValueError("Invalid byte value {}, requires <0 - 255>".format(value))
         self.data.append(value)
 
     def pop(self, index):
@@ -281,7 +286,7 @@ class PropBytes(Property):
         result  = line_offset(tabsize, depth, self.name)
         result += ' = ['
         result += ' '.join(["{:02X}".format(byte) for byte in self.data])
-        result += '];'
+        result += '];\n'
         return result
 
     def to_dtb(self, strings, pos=0, version=17):

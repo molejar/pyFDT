@@ -14,7 +14,7 @@
 
 import os
 
-from .node import Node, Nop
+from .node import Node
 from .prop import Property, PropBytes, PropWords, PropStrings
 from .head import Header, DTB_BEGIN_NODE, DTB_END_NODE, DTB_NOP, DTB_PROP, DTB_END
 from .misc import strip_comments, split_to_lines, get_version_info, extract_string
@@ -27,7 +27,6 @@ __status__  = "Development"
 __all__     = [
     # FDT Classes
     'FDT',
-    'Nop',
     'Node',
     'Header',
     'PropBytes',
@@ -45,27 +44,13 @@ class FDT(object):
     def __init__(self):
         self.header = Header()
         self.entries = []
-        self.prenops = []
-        self.postnops = []
         self.rootnode = None
 
     def info(self):
         pass
 
-    def merge_entries(self, entries):
-        if entries:
-            for in_entry in entries:
-                exist = False
-                for index in range(len(self.entries)):
-                    if self.entries[index]['address'] == in_entry['address']:
-                        self.entries[index]['address'] = in_entry['size']
-                        exist = True
-                        break
-                if not exist:
-                    self.entries.append(in_entry)
-
-    def merge_rootnode(self, node):
-        self.rootnode.merge(node)
+    def diff(self, fdt):
+        pass
 
     def merge(self, fdt):
         if not isinstance(fdt, FDT):
@@ -76,8 +61,17 @@ class FDT(object):
             if fdt.header.version is not None and \
                fdt.header.version > self.header.version:
                 self.header.version = fdt.header.version
-        self.merge_entries(fdt.entries)
-        self.merge_rootnode(fdt.rootnode)
+        if fdt.entries:
+            for in_entry in fdt.entries:
+                exist = False
+                for index in range(len(self.entries)):
+                    if self.entries[index]['address'] == in_entry['address']:
+                        self.entries[index]['address'] = in_entry['size']
+                        exist = True
+                        break
+                if not exist:
+                    self.entries.append(in_entry)
+        self.rootnode.merge(fdt.rootnode)
 
     def to_dts(self, tabsize=4):
         """Store FDT Object into string format (DTS)"""
@@ -93,14 +87,8 @@ class FDT(object):
                 result += "{:#x} ".format(entry['address']) if entry['address'] else "0 "
                 result += "{:#x}".format(entry['size']) if entry['size'] else "0"
                 result += ";\n"
-        if self.prenops:
-            result += '\n'.join([nop.to_dts(tabsize) for nop in self.prenops])
-            result += '\n'
         if self.rootnode is not None:
             result += self.rootnode.to_dts(tabsize)
-        if self.postnops:
-            result += '\n'
-            result += '\n'.join([nop.to_dts(tabsize) for nop in self.postnops])
         return result
 
     def to_dtb(self, version=None, last_comp_version=None, boot_cpuid_phys=None):
@@ -126,10 +114,6 @@ class FDT(object):
         blob_entries += pack('>QQ', 0, 0)
         blob_data_start = self.header.size + len(blob_entries)
         (blob_data, blob_strings, data_pos) = self.rootnode.to_dtb('', blob_data_start, self.header.version)
-        if self.prenops:
-            blob_data = pack('').join([nop.to_dtb('')[0] for nop in self.prenops]) + blob_data
-        if self.postnops:
-            blob_data += pack('').join([nop.to_dtb('')[0] for nop in self.postnops])
         blob_data += pack('>I', DTB_END)
         self.header.size_dt_strings = len(blob_strings)
         self.header.size_dt_struct = len(blob_data)
@@ -146,15 +130,15 @@ def parse_dts(text, root_dir=''):
     ver = get_version_info(text)
     text = strip_comments(text)
     dts_lines = split_to_lines(text)
-    dt = FDT()
+    fdt_obj = FDT()
     if 'version' in ver:
-        dt.header.version = ver['version']
+        fdt_obj.header.version = ver['version']
     if 'last_comp_version' in ver:
-        dt.header.last_comp_version = ver['last_comp_version']
+        fdt_obj.header.last_comp_version = ver['last_comp_version']
     if 'boot_cpuid_phys' in ver:
-        dt.header.boot_cpuid_phys = ver['boot_cpuid_phys']
+        fdt_obj.header.boot_cpuid_phys = ver['boot_cpuid_phys']
     # parse entries
-    dt.entries = []
+    fdt_obj.entries = []
     for line in dts_lines:
         if line.endswith('{'):
             break
@@ -163,33 +147,25 @@ def parse_dts(text, root_dir=''):
             line = line.split()
             if len(line) != 3 :
                 raise Exception()
-            dt.entries.append({'address': int(line[1], 0), 'size': int(line[2], 0)})
+            fdt_obj.entries.append({'address': int(line[1], 0), 'size': int(line[2], 0)})
     # parse nodes
     curnode = None
-    dt.rootnode = None
+    fdt_obj.rootnode = None
     for line in dts_lines:
         if line.endswith('{'):
             # start node
             node_name = line.split()[0]
             new_node = Node(node_name)
-            if dt.rootnode is None:
-                dt.rootnode = new_node
+            if fdt_obj.rootnode is None:
+                fdt_obj.rootnode = new_node
             if curnode is not None:
                 curnode.append(new_node)
-                new_node.set_parent_node(curnode)
+                new_node.parent = curnode
             curnode = new_node
         elif line.endswith('}'):
             # end node
             if curnode is not None:
-                curnode = curnode.get_parent_node()
-        elif line.endswith('[NOP]'):
-            # Nop
-            if curnode is not None:
-                curnode.append(Nop())
-            elif dt.rootnode is not None:
-                dt.postnops.append(Nop())
-            else:
-                dt.prenops.append(Nop())
+                curnode = curnode.parent
         else:
             # properties
             if line.find('=') == -1:
@@ -234,28 +210,28 @@ def parse_dts(text, root_dir=''):
             if curnode is not None:
                 curnode.append(prop_obj)
 
-    return dt
+    return fdt_obj
 
 
 def parse_dtb(data):
     """ Parse FDT Binary Blob and create FDT Object """
     from struct import unpack_from
 
-    dt = FDT()
+    fdt_obj = FDT()
     # parse header
-    dt.header = Header.parse(data)
+    fdt_obj.header = Header.parse(data)
     # parse entries
-    offset = dt.header.off_mem_rsvmap
+    offset = fdt_obj.header.off_mem_rsvmap
     aa = data[offset:]
     while True:
         entrie = dict(zip(('address', 'size'), unpack_from(">QQ", data, offset)))
         offset += 16
         if entrie['address'] == 0 and entrie['size'] == 0:
             break
-        dt.entries.append(entrie)
+        fdt_obj.entries.append(entrie)
     # parse nodes
     curnode = None
-    offset = dt.header.off_dt_struct
+    offset = fdt_obj.header.off_dt_struct
     while True:
         if len(data) < (offset + 4):
             raise Exception("Error ...")
@@ -267,28 +243,21 @@ def parse_dtb(data):
             offset = ((offset + len(node_name) + 4) & ~3)
             if not node_name: node_name = '/'
             new_node = Node(node_name)
-            if dt.rootnode is None:
-                dt.rootnode = new_node
+            if fdt_obj.rootnode is None:
+                fdt_obj.rootnode = new_node
             if curnode is not None:
                 curnode.append(new_node)
-                new_node.set_parent_node(curnode)
+                new_node.parent = curnode
             curnode = new_node
         elif tag == DTB_END_NODE:
             if curnode is not None:
-                curnode = curnode.get_parent_node()
-        elif tag == DTB_NOP:
-            if curnode is not None:
-                curnode.append(Nop())
-            elif dt.rootnode is not None:
-                dt.postnops.append(Nop())
-            else:
-                dt.prenops.append(Nop())
+                curnode = curnode.parent
         elif tag == DTB_PROP:
             prop_size, prop_string_pos, = unpack_from(">II", data, offset)
             prop_start = offset + 8
-            if dt.header.version < 16 and prop_size >= 8:
+            if fdt_obj.header.version < 16 and prop_size >= 8:
                 prop_start = ((prop_start + 7) & ~0x7)
-            prop_name = extract_string(data, dt.header.off_dt_strings + prop_string_pos)
+            prop_name = extract_string(data, fdt_obj.header.off_dt_strings + prop_string_pos)
             prop_raw_value = data[prop_start: prop_start + prop_size]
             offset = prop_start + prop_size
             offset = ((offset + 3) & ~0x3)
@@ -299,4 +268,4 @@ def parse_dtb(data):
         else:
             raise Exception("Unknown Tag: {}".format(tag))
 
-    return dt
+    return fdt_obj

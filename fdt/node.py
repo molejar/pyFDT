@@ -16,34 +16,14 @@ from copy import deepcopy, copy
 from struct import pack
 from string import printable
 
-from .head import DTB_NOP, DTB_BEGIN_NODE, DTB_END_NODE
+from .head import DTB_BEGIN_NODE, DTB_END_NODE
 from .prop import Property
 from .misc import line_offset
 
 
-class Nop(object):
-    """Nop child representation"""
-
-    @property
-    def name(self):
-        return ""
-
-    def __init__(self):
-        """Init with nothing"""
-        pass
-
-    def __str__(self):
-        """String representation"""
-        return ''
-
-    def to_dts(self, tabsize=4, depth=0):
-        """Get dts string representation"""
-        return line_offset(tabsize, depth, '// [NOP]')
-
-    def to_dtb(self, string_store, pos=0, version=17):
-        """Get blob representation"""
-        pos += 4
-        return pack('>I', DTB_NOP), string_store, pos
+def split_path(path):
+    xpath = path.split('/')
+    return xpath[-1], '/'.join(xpath[:-1]) if len(xpath) > 1 else ""
 
 
 class Node(object):
@@ -56,156 +36,218 @@ class Node(object):
     @name.setter
     def name(self, value):
         if not isinstance(value, str):
-            raise Exception("The value must be a string type !")
+            raise ValueError("The value must be a string type !")
         if not all(c in printable for c in value):
-            raise Exception("The value must contain only printable chars !")
+            raise ValueError("The value must contain only printable chars !")
         self._name = value
 
-    def __init__(self, name):
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, node):
+        if node is not None and not isinstance(node, Node):
+            raise ValueError("Invalid object type")
+        self._parent = node
+
+    @property
+    def path(self):
+        node = self
+        path = []
+        while node.parent is not None:
+            node = node.parent
+            if node.name == '/': break
+            path.append(node.name)
+        return '/'.join(path[::-1])
+
+    @property
+    def props(self):
+        return self._props
+
+    @property
+    def nodes(self):
+        return self._nodes
+
+    def __init__(self, name=None, props=None, nodes=None):
         """Init node with name"""
-        self.name = name
-        self.parent = None
-        self.subdata = []
+        self._name = ""
+        self._props = [] if props is None else props
+        self._nodes = [] if nodes is None else nodes
+        self._parent = None
+        if name is not None:
+            self.name = name
 
     def __str__(self):
         """String representation"""
-        return "{}".format(self.name)
-
-    def __getitem__(self, index):
-        """Get subnodes, returns either a Node, a Property or a Nop"""
-        return self.subdata[index]
-
-    def __setitem__(self, index, item):
-        """Set node at index, replacing previous subnode, must not be a duplicate name
-        """
-        if not isinstance(item, (Nop, Node, Property)):
-            raise Exception("Invalid object type")
-        dupl_index = self.get_index_by_name(item.name, type(item))
-        if dupl_index is not None and dupl_index != index:
-            raise Exception("{}: \"{}\" item already exists".format(self, item.name))
-        self.subdata[index] = item
-
-    def __len__(self):
-        """Get strings count"""
-        return len(self.subdata)
+        return "NODE: {} ({} props, {} sub-nodes)".format(self.name, len(self.props), len(self.nodes))
 
     def __ne__(self, node):
-        """Check node inequality
-           i.e. is subnodes are the same, in either order
-           and properties are the same (same values)
-           The FdtNop is excluded from the check
-        """
+        """Check node inequality"""
         return not self.__eq__(node)
 
     def __eq__(self, node):
-        """Check node equality
-           i.e. is subnodes are the same, in either order
-           and properties are the same (same values)
-           The FdtNop is excluded from the check
-        """
+        """Check node equality"""
         if not isinstance(node, Node):
-            raise Exception("Invalid object type")
+            raise ValueError("Invalid object type")
         if self.name != node.name:
             return False
-        curnames = set([subnode.name for subnode in self.subdata if not isinstance(subnode, Nop)])
-        cmpnames = set([subnode.name for subnode in node if not isinstance(subnode, Nop)])
-        if curnames != cmpnames:
+        if len(self.props) != len(node.props) or \
+           len(self.nodes) != len(node.nodes):
             return False
-        for subnode in [subnode for subnode in self.subdata if not isinstance(subnode, Nop)]:
-            index = node.index(subnode)
-            if subnode != node[index]:
+        for p in self.props:
+            if p not in node.props:
+                return False
+        for n in self.nodes:
+            if n not in node.nodes:
                 return False
         return True
 
-    def get_item_by_name(self, item_name, item_type=None):
-        """ Get index value of existing item type and name """
-        for item in self.subdata:
-            if (item_type is None or type(item) is item_type) and item.name == item_name:
-                return item
-        return None
-
-    def get_index_by_name(self, item_name, item_type=None):
-        """ Get index value of existing item type and name """
-        for index, item in enumerate(self.subdata):
-            if (item_type is None or type(item) is item_type) and item.name == item_name:
+    def get_property_index(self, path):
+        """Get index value of existing item by name"""
+        prop_name, node_path = split_path(path)
+        node = self.get_subnode(node_path)
+        if node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+        for index, item in enumerate(node.props):
+            if item.name == prop_name:
                 return index
         return None
 
-    def set_parent_node(self, node):
-        """Set parent node, None and FdtNode accepted"""
-        if node is not None and not isinstance(node, Node):
-            raise Exception("Invalid object type")
-        self.parent = node
+    def get_subnode_index(self, path):
+        """Get index value of existing item by name"""
+        node_name, node_path = split_path(path)
+        node = self.get_subnode(node_path)
+        if node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+        for index, item in enumerate(node.nodes):
+            if item.name == node_name:
+                return index
+        return None
 
-    def get_parent_node(self):
-        """Get parent node"""
-        return self.parent
+    def get_property(self, path):
+        """Get property obj by path/name"""
+        prop_name, node_path = split_path(path)
+        node = self.get_subnode(node_path)
+        if node is not None:
+            for item in node.props:
+                if item.name == prop_name:
+                    return item
+        return None
 
-    def append(self, item):
-        """Append subnode, same as add_subnode"""
-        if not isinstance(item, (Node, Property, Nop)):
-            raise Exception("Invalid object type")
-        if self.get_item_by_name(item.name, type(item)) is not None:
-            raise Exception("{}: \"{}\" item already exists".format(self, item.name))
-        self.subdata.append(item)
+    def get_subnode(self, path):
+        """Get subnode obj by path/name"""
+        node = self
+        if path:
+            for sub_name in path.split('/'):
+                found = False
+                for n in node.nodes:
+                    if n.name == sub_name:
+                        node = n
+                        found = True
+                        break
+                if not found:
+                    return None
+        return node
 
-    def pop(self, index=-1):
-        """Remove and returns subnode at index, default the last"""
-        return self.subdata.pop(index)
+    def remove_property(self, path):
+        """Remove property obj by path/name. Raises ValueError if path/name not exist"""
+        prop_name, node_path = split_path(path)
+        node = self.get_subnode(node_path)
+        if node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+        item = node.get_property(prop_name)
+        if item is None:
+            raise Exception("{}: \"{}\" property doesn't exists".format(self, prop_name))
+        node.props.remove(item)
 
-    def insert(self, index, item):
-        """Insert subnode before index, must not be a duplicate name"""
-        if not isinstance(item, (Node, Property, Nop)):
-            raise Exception("Invalid object type")
-        if self.get_item_by_name(item.name, type(item)) is not None:
-            raise Exception("{}: \"{}\" item already exists".format(self, item.name))
-        self.subdata.insert(index, item)
+    def remove_subnode(self, path):
+        """Remove subnode obj by path/name. Raises ValueError if path/name not exist"""
+        node_name, node_path = split_path(path)
+        node = self.get_subnode(node_path)
+        if node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+        item = node.get_subnode(node_name)
+        if item is None:
+            raise Exception("{}: \"{}\" subnode doesn't exists".format(self, node_name))
+        node.nodes.remove(item)
 
-    def remove(self, item):
-        """Remove item from node
-           Raises ValueError if not present
-        """
-        index = self.get_index_by_name(item.name, type(item))
-        if index is None:
-            raise ValueError("Not present")
-        return self.subdata.pop(index)
+    def append(self, item, path=""):
+        """Append sub-node or property at specified path"""
+        node = self.get_subnode(path)
+        if node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
 
-    def index(self, item):
-        """Returns position of the item
-           Raises ValueError if not present
-        """
-        index = self.get_index_by_name(item.name, type(item))
-        if index is None:
-            raise ValueError("Not present")
-        return index
+        if isinstance(item, Property):
+            if node.get_property(item.name) is not None:
+                raise Exception("{}: \"{}\" property already exists".format(self, item.name))
+            node.props.append(item)
 
-    def merge(self, node):
-        """Merge two nodes and subnodes
-           Replace current properties with the given properties
+        elif isinstance(item, Node):
+            if node.get_subnode(item.name) is not None:
+                raise Exception("{}: \"{}\" node already exists".format(self, item.name))
+            item.parent = node
+            node.nodes.append(item)
+
+        else:
+            raise TypeError("Invalid object type")
+
+    def merge(self, node, replace=True):
+        """ Merge two nodes and subnodes.
+            Replace current properties with the given properties if replace is True.
         """
         if not isinstance(node, Node):
-            raise Exception("Can only merge with a Node Object !")
+            raise TypeError("Invalid object type")
 
-        for subnode in [obj for obj in node if isinstance(obj, (Node, Property))]:
-            index = self.get_index_by_name(subnode.name, type(subnode))
+        for prop in node.props:
+            index = self.get_property_index(prop.name)
             if index is None:
-                dup = deepcopy(subnode)
-                if isinstance(subnode, Node):
-                    dup.set_parent_node(self)
-                self.append(dup)
-            elif isinstance(subnode, Node):
-                self.subdata[index].merge(subnode)
+                self._props.append(deepcopy(prop))
+            elif prop in self._props:
+                continue
+            elif replace:
+                self._props[index] = copy(prop)
             else:
-                self.subdata[index] = copy(subnode)
+                pass
+
+        for sub_node in node.nodes:
+            index = self.get_subnode_index(sub_node.name)
+            if index is None:
+                dup_node = deepcopy(sub_node)
+                dup_node.parent = self
+                self._nodes.append(dup_node)
+            elif sub_node in self._nodes:
+                continue
+            else:
+                self._nodes[index].merge(sub_node, replace)
+
+    def walk(self, path=""):
+        """ Walk into subnodes and yield paths and objects
+            Returns set with (path string, node object)
+        """
+        root_node = self.get_subnode(path)
+        if root_node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+
+        node = root_node
+        index = 0
+        xpath = []
+
+        while True:
+            yield ('/'.join(xpath), node)
+            if node.nodes:
+                xpath.append(node.name)
+                node = node.nodes[index]
+                index += 1
+            else:
+                pass
 
     def to_dts(self, tabsize=4, depth=0):
         """Get NODE in string representation"""
-        content = '\n'.join([sub.to_dts(tabsize, depth + 1) for sub in self.subdata])
-        content += '\n' if content else ''
-        dts = "\n"
-        dts += line_offset(tabsize, depth, self.name + ' {\n')
-        dts += content
-        dts += line_offset(tabsize, depth, "};")
+        dts  = line_offset(tabsize, depth, self.name + ' {\n')
+        dts += ''.join([prop.to_dts(tabsize, depth + 1) for prop in self._props])
+        dts += ''.join([node.to_dts(tabsize, depth + 1) for node in self._nodes])
+        dts += line_offset(tabsize, depth, "};\n")
         return dts
 
     def to_dtb(self, strings, pos=0, version=17):
@@ -218,8 +260,11 @@ class Node(object):
         if len(blob) % 4:
             blob += pack('b', 0) * (4 - (len(blob) % 4))
         pos += len(blob)
-        for sub in self.subdata:
-            (data, strings, pos) = sub.to_dtb(strings, pos, version)
+        for prop in self._props:
+            (data, strings, pos) = prop.to_dtb(strings, pos, version)
+            blob += data
+        for node in self._nodes:
+            (data, strings, pos) = node.to_dtb(strings, pos, version)
             blob += data
         pos += 4
         blob += pack('>I', DTB_END_NODE)
