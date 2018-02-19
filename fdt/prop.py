@@ -173,10 +173,11 @@ class PropStrings(Property):
 class PropWords(Property):
     """Property with words as value"""
 
-    def __init__(self, name, words=None):
+    def __init__(self, name, words=None, word_size=32):
         """Init with words"""
         super().__init__(name)
         self.data = [] if words is None else words
+        self.word_size = word_size
 
     def __str__(self):
         """String representation"""
@@ -204,8 +205,8 @@ class PropWords(Property):
         return True
 
     def append(self, value):
-        if not 0 <= value <= 0xFFFFFFFF:
-            raise ValueError("Invalid word value {}, requires <0 - 4294967295>".format(value))
+        if not 0 <= value < 2**self.word_size:
+            raise ValueError("Invalid word value {}, requires <0x0 - 0x{:X}>".format(value, 2**self.word_size - 1))
         self.data.append(value)
 
     def pop(self, index):

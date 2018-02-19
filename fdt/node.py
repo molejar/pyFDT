@@ -57,7 +57,8 @@ class Node(object):
         path = []
         while node.parent is not None:
             node = node.parent
-            if node.name == '/': break
+            if node.name == '/':
+                break
             path.append(node.name)
         return '/'.join(path[::-1])
 
@@ -141,9 +142,9 @@ class Node(object):
         if path:
             for sub_name in path.split('/'):
                 found = False
-                for n in node.nodes:
-                    if n.name == sub_name:
-                        node = n
+                for sub_node in node.nodes:
+                    if sub_node.name == sub_name:
+                        node = sub_node
                         found = True
                         break
                 if not found:
@@ -186,6 +187,8 @@ class Node(object):
         elif isinstance(item, Node):
             if node.get_subnode(item.name) is not None:
                 raise Exception("{}: \"{}\" node already exists".format(self, item.name))
+            if item is self:
+                raise Exception("{}: append the same node {}".format(self, item.name))
             item.parent = node
             node.nodes.append(item)
 
