@@ -33,9 +33,18 @@ class Property(object):
             raise ValueError("The value must contain just printable chars !")
         self._name = value
 
+    @property
+    def basepath(self):
+        return self._basepath
+
+    @basepath.setter
+    def basepath(self, value):
+        self._basepath = value
+
     def __init__(self, name):
         """Init with name"""
         self.name = name
+        self._basepath = None
 
     def __str__(self):
         """String representation"""

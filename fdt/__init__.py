@@ -52,6 +52,36 @@ class FDT(object):
     def diff(self, fdt):
         pass
 
+    def walk(self):
+        todo_stack = []
+        condition = True
+        tmp_object = self.rootnode
+        tmp_object.basepath = ''
+        while True:
+            basepath = tmp_object.basepath
+            if isinstance(tmp_object, Node):
+                # push current childs on 'todo' stack
+                if tmp_object.nodes:
+                    for n in tmp_object.nodes:
+                        n.basepath = basepath + '/' + tmp_object.name
+                        todo_stack.append(n)
+                # push current properties on 'todo' stack
+                if tmp_object.props:
+                    for n in tmp_object.props:
+                        n.basepath = basepath + '/' + tmp_object.name
+                        todo_stack.append(n)
+                # yield if current object is an empty node
+                if not tmp_object.nodes and not tmp_object.props:
+                    yield (tmp_object.basepath + '/' + tmp_object.name, tmp_object)
+            # yield if current object is an property
+            if isinstance(tmp_object, Property):
+                yield (tmp_object.basepath + '/.' + tmp_object.name, tmp_object)
+            # terminate if 'todo' stack is empty
+            if not todo_stack:
+                break
+            # take another node from 'todo' stack
+            tmp_object = todo_stack.pop()
+
     def merge(self, fdt):
         if not isinstance(fdt, FDT):
             raise Exception("Error")
@@ -269,3 +299,6 @@ def parse_dtb(data):
             raise Exception("Unknown Tag: {}".format(tag))
 
     return fdt_obj
+
+
+
