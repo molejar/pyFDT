@@ -42,6 +42,14 @@ class Node(object):
         self._name = value
 
     @property
+    def basepath(self):
+        return self._basepath
+
+    @basepath.setter
+    def basepath(self, value):
+        self._basepath = value
+
+    @property
     def parent(self):
         return self._parent
 
@@ -76,6 +84,7 @@ class Node(object):
         self._props = [] if props is None else props
         self._nodes = [] if nodes is None else nodes
         self._parent = None
+        self._basepath = None
         if name is not None:
             self.name = name
 
@@ -223,27 +232,6 @@ class Node(object):
                 continue
             else:
                 self._nodes[index].merge(sub_node, replace)
-
-    def walk(self, path=""):
-        """ Walk into subnodes and yield paths and objects
-            Returns set with (path string, node object)
-        """
-        root_node = self.get_subnode(path)
-        if root_node is None:
-            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
-
-        node = root_node
-        index = 0
-        xpath = []
-
-        while True:
-            yield ('/'.join(xpath), node)
-            if node.nodes:
-                xpath.append(node.name)
-                node = node.nodes[index]
-                index += 1
-            else:
-                pass
 
     def to_dts(self, tabsize=4, depth=0):
         """Get NODE in string representation"""
