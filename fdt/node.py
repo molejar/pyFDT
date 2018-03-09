@@ -204,10 +204,15 @@ class Node(object):
         if node is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
 
-        mark = '' if path else '/'
         while True:
             todo += node.nodes
-            yield (mark + node.path, node.props)
+            if node.props:
+                props_path = '' if path else '/'
+                if node.path:
+                    props_path += node.path + '/' + node.name
+                else:
+                    props_path += node.name
+                yield (props_path, node.props)
             if not todo:
                 break
             node = todo.pop()
