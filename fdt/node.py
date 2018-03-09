@@ -35,10 +35,8 @@ class Node(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, str):
-            raise ValueError("The value must be a string type !")
-        if not all(c in printable for c in value):
-            raise ValueError("The value must contain only printable chars !")
+        assert isinstance(value, str), "The value must be a string type !"
+        assert all(c in printable for c in value), "The value must contain only printable chars !"
         self._name = value
 
     @property
@@ -55,8 +53,7 @@ class Node(object):
 
     @parent.setter
     def parent(self, node):
-        if node is not None and not isinstance(node, Node):
-            raise ValueError("Invalid object type")
+        assert node is None or isinstance(node, Node), "Invalid object type"
         self._parent = node
 
     @property
@@ -84,13 +81,12 @@ class Node(object):
         self._props = [] if props is None else props
         self._nodes = [] if nodes is None else nodes
         self._parent = None
-        self._basepath = None
         if name is not None:
             self.name = name
 
     def __str__(self):
         """String representation"""
-        return "NODE: {} ({} props, {} sub-nodes)".format(self.name, len(self.props), len(self.nodes))
+        return "< {}: {} props, {} nodes >".format(self.name, len(self.props), len(self.nodes))
 
     def __ne__(self, node):
         """Check node inequality"""
@@ -167,9 +163,8 @@ class Node(object):
         if node is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
         item = node.get_property(prop_name)
-        if item is None:
-            raise Exception("{}: \"{}\" property doesn't exists".format(self, prop_name))
-        node.props.remove(item)
+        if item is not None:
+            node.props.remove(item)
 
     def remove_subnode(self, path):
         """Remove subnode obj by path/name. Raises ValueError if path/name not exist"""
@@ -178,9 +173,8 @@ class Node(object):
         if node is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
         item = node.get_subnode(node_name)
-        if item is None:
-            raise Exception("{}: \"{}\" subnode doesn't exists".format(self, node_name))
-        node.nodes.remove(item)
+        if item is not None:
+            node.nodes.remove(item)
 
     def append(self, item, path=""):
         """Append sub-node or property at specified path"""
@@ -204,12 +198,33 @@ class Node(object):
         else:
             raise TypeError("Invalid object type")
 
+    def walk(self, path=""):
+        todo = []
+        node = self.get_subnode(path)
+        if node is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+
+        mark = '' if path else '/'
+        while True:
+            todo += node.nodes
+            yield (mark + node.path, node.props)
+            if not todo:
+                break
+            node = todo.pop()
+
+    def diff(self, node):
+        """ Diff two nodes
+        :param node:
+        :return:
+        """
+        assert isinstance(node, Node), "Invalid object type"
+        raise NotImplementedError()
+
     def merge(self, node, replace=True):
         """ Merge two nodes and subnodes.
             Replace current properties with the given properties if replace is True.
         """
-        if not isinstance(node, Node):
-            raise TypeError("Invalid object type")
+        assert isinstance(node, Node), "Invalid object type"
 
         for prop in node.props:
             index = self.get_property_index(prop.name)

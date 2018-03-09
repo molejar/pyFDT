@@ -27,24 +27,15 @@ class Property(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, str):
-            raise ValueError("The value must be a string type !")
-        if not all(c in printable for c in value):
-            raise ValueError("The value must contain just printable chars !")
+        assert isinstance(value, str), "The value must be a string type !"
+        assert all(c in printable for c in value), "The value must contain just printable chars !"
         self._name = value
 
-    @property
-    def basepath(self):
-        return self._basepath
-
-    @basepath.setter
-    def basepath(self, value):
-        self._basepath = value
-
-    def __init__(self, name):
+    def __init__(self, name=None):
         """Init with name"""
-        self.name = name
-        self._basepath = None
+        self._name = ""
+        if name is not None:
+            self.name = name
 
     def __str__(self):
         """String representation"""
@@ -106,10 +97,12 @@ class Property(object):
 class PropStrings(Property):
     """Property with strings as value"""
 
-    def __init__(self, name, strings=None):
+    def __init__(self, name, *args):
         """Init with strings"""
         super().__init__(name)
-        self.data = [] if strings is None else strings
+        self.data = []
+        for arg in args:
+            self.append(arg)
 
     def __str__(self):
         """String representation"""
@@ -137,16 +130,13 @@ class PropStrings(Property):
         return True
 
     def append(self, value):
-        if not isinstance(value, str):
-            raise TypeError("Invalid object type")
-        if len(value) == 0:
-            raise ValueError("Invalid strings value")
-        if not all(c in printable or c in ('\r', '\n') for c in value):
-            raise ValueError("Invalid chars in strings value")
+        assert isinstance(value, str), "Invalid object type"
+        assert len(value) > 0, "Invalid strings value"
+        assert all(c in printable or c in ('\r', '\n') for c in value), "Invalid chars in strings value"
         self.data.append(value)
 
     def pop(self, index):
-        assert 0 <= index < len(self.data)
+        assert 0 <= index < len(self.data), "Index out of range"
         return self.data.pop(index)
 
     def clear(self):
@@ -182,15 +172,27 @@ class PropStrings(Property):
 class PropWords(Property):
     """Property with words as value"""
 
-    def __init__(self, name, words=None, word_size=32):
-        """Init with words"""
+    def __init__(self, name, *args, **kwargs):
+        """Init with words
+        :param name:
+        :param args:
+        :param kwargs:
+               data:
+               wsize:
+        """
         super().__init__(name)
-        self.data = [] if words is None else words
-        self.word_size = word_size
+        self.data = []
+        self.word_size = kwargs['wsize'] if 'wsize' in kwargs else 32
+        for arg in args:
+            self.append(arg)
+        if 'data' in kwargs:
+            assert isinstance(kwargs['data'], list), "\"data\" argument must be a list type !"
+            for arg in kwargs['data']:
+                self.append(arg)
 
     def __str__(self):
         """String representation"""
-        return "{} = Words: {}".format(self.name, self.data)
+        return "{} = {}".format(self.name, self.data)
 
     def __getitem__(self, index):
         """Get words, returns a word integer"""
@@ -214,12 +216,12 @@ class PropWords(Property):
         return True
 
     def append(self, value):
-        if not 0 <= value < 2**self.word_size:
-            raise ValueError("Invalid word value {}, requires <0x0 - 0x{:X}>".format(value, 2**self.word_size - 1))
+        assert 0 <= value < 2**self.word_size, "Invalid word value {}, use <0x0 - 0x{:X}>".format(
+            value, 2**self.word_size - 1)
         self.data.append(value)
 
     def pop(self, index):
-        assert 0 <= index < len(self.data)
+        assert 0 <= index < len(self.data), "Index out of range"
         return self.data.pop(index)
 
     def clear(self):
@@ -256,7 +258,7 @@ class PropBytes(Property):
 
     def __str__(self):
         """String representation"""
-        return "{} = Bytes: {}".format(self.name, self.data)
+        return "{} = {}".format(self.name, self.data)
 
     def __getitem__(self, index):
         """Get words, returns a word integer"""
@@ -280,12 +282,11 @@ class PropBytes(Property):
         return True
 
     def append(self, value):
-        if not 0 <= value <= 0xFF:
-            raise ValueError("Invalid byte value {}, requires <0 - 255>".format(value))
+        assert 0 <= value <= 0xFF, "Invalid byte value {}, use <0 - 255>".format(value)
         self.data.append(value)
 
     def pop(self, index):
-        assert 0 <= index < len(self.data)
+        assert 0 <= index < len(self.data), "Index out of range"
         return self.data.pop(index)
 
     def clear(self):

@@ -49,85 +49,14 @@ class FDT(object):
     def info(self):
         pass
 
-    def diff(self, target_fdt):
-        # prepare local hash table
-        local_table = {}
-        for i in self.walk():
-            local_table[i[0]] = i[1]
-        # prepare target table
-        target_table = {}
-        for i in target_fdt.walk():
-            target_table[i[0]] = i[1]
-        # 1.st phase of creating diff table
-        # by comparing 'local_table' against 'target_table'.
-        # if key is present in both tables, drop it from 
-        # 'target_table' to simplify second phase, so it 
-        #  will eventualy evaluate only uncompared items. 
-        diff_table = {}
-        for local_key in local_table:
-            local_obj = local_table[local_key]
-            if local_key in target_table:
-                # objects are the same, drop from 'target_table'
-                target_obj = target_table[local_key]
-                if target_obj == local_obj:
-                    del target_table[local_key]
-                # objects are not equal, store both objects, drop from 'target_table'
-                else:
-                    del target_table[local_key]
-                    diff_table[local_key] = {
-                        'status':   'different',
-                        'local':    local_obj,
-                        'target':   target_obj
-                    }
-            else:
-                # 'local_key' is not present in 'target_table'
-                diff_table[local_key] = {
-                    'status':   'missing',
-                    'local':    local_obj
-                }
-        # 2.nd phase, iterate over items that exists only in 'target_table'
-        # if both fdt files are the same, this loop won't be executed
-        for target_key in target_table:
-            target_obj = target_table[target_key]
-            diff_table[target_key] = {
-                'status':   'added',
-                'target':    target_obj
-            }
-        return diff_table
-
     def walk(self):
-        todo_stack = []
-        condition = True
-        tmp_object = self.rootnode
-        tmp_object.basepath = ''
-        while True:
-            basepath = tmp_object.basepath
-            if isinstance(tmp_object, Node):
-                # push current childs on 'todo' stack
-                if tmp_object.nodes:
-                    for n in tmp_object.nodes:
-                        n.basepath = basepath + '/' + tmp_object.name
-                        todo_stack.append(n)
-                # push current properties on 'todo' stack
-                if tmp_object.props:
-                    for n in tmp_object.props:
-                        n.basepath = basepath + '/' + tmp_object.name
-                        todo_stack.append(n)
-                # yield if current object is an empty node
-                if not tmp_object.nodes and not tmp_object.props:
-                    yield (tmp_object.basepath + '/' + tmp_object.name, tmp_object)
-            # yield if current object is an property
-            if isinstance(tmp_object, Property):
-                yield (tmp_object.basepath + '/.' + tmp_object.name, tmp_object)
-            # terminate if 'todo' stack is empty
-            if not todo_stack:
-                break
-            # take another node from 'todo' stack
-            tmp_object = todo_stack.pop()
+        return self.rootnode.walk()
+
+    def diff(self, fdt):
+        pass
 
     def merge(self, fdt):
-        if not isinstance(fdt, FDT):
-            raise Exception("Error")
+        assert isinstance(fdt, FDT), "Invalid object type"
         if self.header.version is None:
             self.header = fdt.header
         else:
