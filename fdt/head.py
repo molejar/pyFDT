@@ -92,7 +92,7 @@ class Header(object):
     def parse(cls, data, offset=0):
         data_offset = cls.MIN_SIZE
         if len(data) < (offset + data_offset):
-            raise ValueError("Error ...")
+            raise ValueError("Data size too small !")
 
         header_vals = unpack_from('>7I', data, offset)
         if header_vals[0] != cls.MAGIC_NUMBER:

@@ -59,13 +59,15 @@ class Node(object):
     @property
     def path(self):
         node = self
+        root = ''
         path = []
         while node.parent is not None:
             node = node.parent
             if node.name == '/':
+                root = '/'
                 break
             path.append(node.name)
-        return '/'.join(path[::-1])
+        return root + '/'.join(path[::-1]) if path else ''
 
     @property
     def props(self):
@@ -109,19 +111,25 @@ class Node(object):
                 return False
         return True
 
-    def get_property_index(self, path):
-        """Get index value of existing item by name"""
-        prop_name, node_path = split_path(path)
-        node = self.get_subnode(node_path)
+    def get_property_index(self, name, path=""):
+        """ Get index value of existing item by name
+        :param name: The property name
+        :param path: The path to sub-node
+        :return property index
+        """
+        node = self.get_subnode(path)
         if node is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
         for index, item in enumerate(node.props):
-            if item.name == prop_name:
+            if item.name == name:
                 return index
         return None
 
     def get_subnode_index(self, path):
-        """Get index value of existing item by name"""
+        """ Get index value of existing item by name
+        :param path: The path to sub-node
+        :return node index
+        """
         node_name, node_path = split_path(path)
         node = self.get_subnode(node_path)
         if node is None:
@@ -131,43 +139,58 @@ class Node(object):
                 return index
         return None
 
-    def get_property(self, path):
-        """Get property obj by path/name"""
-        prop_name, node_path = split_path(path)
-        node = self.get_subnode(node_path)
+    def get_property(self, name, path=""):
+        """ Get property obj by path/name
+        :param name: The property name
+        :param path: The path to sub-node
+        :return property object
+        """
+        node = self.get_subnode(path)
         if node is not None:
             for item in node.props:
-                if item.name == prop_name:
+                if item.name == name:
                     return item
         return None
 
     def get_subnode(self, path):
-        """Get subnode obj by path/name"""
+        """ Get subnode obj by path/name
+        :param path: The path to sub-node
+        :return node object
+        """
         node = self
+        path = path.lstrip('/')
         if path:
-            for sub_name in path.split('/'):
-                found = False
-                for sub_node in node.nodes:
-                    if sub_node.name == sub_name:
-                        node = sub_node
-                        found = True
+            names = path.split('/')
+            found = 0
+
+            for name in names:
+                for subnode in node.nodes:
+                    if subnode.name == name:
+                        found += 1
+                        node = subnode
                         break
-                if not found:
-                    return None
+
+            if len(names) != found:
+                return None
+
         return node
 
-    def remove_property(self, path):
-        """Remove property obj by path/name. Raises ValueError if path/name not exist"""
-        prop_name, node_path = split_path(path)
-        node = self.get_subnode(node_path)
+    def remove_property(self, name, path=""):
+        """ Remove property obj by path/name. Raises ValueError if path/name not exist
+        :param name: The property name
+        :param path: The path to sub-node
+        """
+        node = self.get_subnode(path)
         if node is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
-        item = node.get_property(prop_name)
+        item = node.get_property(name)
         if item is not None:
             node.props.remove(item)
 
     def remove_subnode(self, path):
-        """Remove subnode obj by path/name. Raises ValueError if path/name not exist"""
+        """ Remove subnode obj by path/name. Raises ValueError if path/name not exist
+        :param path: The path to sub-node
+        """
         node_name, node_path = split_path(path)
         node = self.get_subnode(node_path)
         if node is None:
@@ -177,7 +200,10 @@ class Node(object):
             node.nodes.remove(item)
 
     def append(self, item, path=""):
-        """Append sub-node or property at specified path"""
+        """ Append sub-node or property at specified path
+        :param item: The node or property object
+        :param path: The path to sub-node
+        """
         node = self.get_subnode(path)
         if node is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
@@ -198,32 +224,89 @@ class Node(object):
         else:
             raise TypeError("Invalid object type")
 
-    def walk(self, path=""):
-        todo = []
-        node = self.get_subnode(path)
-        if node is None:
+    def create(self, path):
+        """
+        :param path:
+        """
+        assert isinstance(path, str), "The path must be a string type !"
+
+        node = self
+        path = path.lstrip('/')
+        abspath = ''
+        for name in path.split('/'):
+            abspath += '/' + name
+            subnode = self.get_subnode(abspath)
+            if subnode is None:
+                subnode = Node(name)
+                node.append(subnode)
+            node = subnode
+
+    def walk(self, path="", relative=False):
+        """ Walk trough sub-nodes and return relative/absolute path wih list of properties
+        :param path: The path to sub-node
+        :param relative: True for relative or False for absolute return path
+        :return: [0 - relative/absolute path, 1 - list of properties]
+        """
+        nodes = []
+        subnode = self.get_subnode(path)
+        if subnode is None:
             raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
-
         while True:
-            todo += node.nodes
-            if node.props:
-                props_path = '' if path else '/'
-                if node.path:
-                    props_path += node.path + '/' + node.name
-                else:
-                    props_path += node.name
-                yield (props_path, node.props)
-            if not todo:
+            nodes += subnode.nodes
+            if subnode.props:
+                props_path = "{}/{}".format(subnode.path, subnode.name).replace('//', '/')
+                if path and relative:
+                    props_path = props_path.replace(path, '').lstrip('/')
+                yield (props_path, subnode.props)
+            if not nodes:
                 break
-            node = todo.pop()
+            subnode = nodes.pop()
 
-    def diff(self, node):
+    def diff(self, node, path=""):
         """ Diff two nodes
-        :param node:
-        :return:
+        :param node: The node object
+        :param path: The path to sub-node
+        :return: list of 3 objects (same in A and B, specific A, specific B)
         """
         assert isinstance(node, Node), "Invalid object type"
-        raise NotImplementedError()
+
+        subnode = self.get_subnode(path)
+        if subnode is None:
+            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
+
+        # prepare hash table A
+        hash_table_a = {}
+        for path, props in self.walk():
+            hash_table_a[path] = props
+        # prepare hash table B
+        hash_table_b = {}
+        for path, props in node.walk():
+            hash_table_b[path] = props
+        # compare input tables and generate 3 hash tables: same in A and B, specific A, specific B
+        diff_tables = [{}, {}, {}]
+        for path_a, props_a in hash_table_a.items():
+            if path_a in hash_table_b:
+                props_b = hash_table_b[path_a]
+                props_s = [p for p in props_a if p in props_b]
+                props_a = [p for p in props_a if p not in props_s]
+                props_b = [p for p in props_b if p not in props_s]
+                if props_s: diff_tables[0][path_a] = props_s
+                if props_a: diff_tables[1][path_a] = props_a
+                if props_b: diff_tables[2][path_a] = props_b
+            else:
+                diff_tables[1][path_a] = props_a
+        for path_b, props_b in hash_table_b.items():
+            if path_b not in hash_table_a:
+                diff_tables[2][path_b] = props_b
+        # convert hash tables into 3 nodes: same in A and B, specific A, specific B
+        diff_nodes = [Node(self.name), Node(self.name), Node(self.name)]
+        for i, d in enumerate(diff_tables):
+            for path, props in d.items():
+                diff_nodes[i].create(path)
+                for p in props:
+                    diff_nodes[i].append(p, path)
+
+        return diff_nodes
 
     def merge(self, node, replace=True):
         """ Merge two nodes and subnodes.

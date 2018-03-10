@@ -53,7 +53,41 @@ class FDT(object):
         return self.rootnode.walk()
 
     def diff(self, fdt):
-        pass
+        assert isinstance(fdt, FDT), "Invalid object type"
+        fdt_same = FDT()
+        fdt_a = FDT()
+        fdt_a.header = self.header
+        fdt_b = FDT()
+        fdt_b.header = fdt.header
+
+        if self.entries and fdt.entries:
+            for entry_a in self.entries:
+                for entry_b in fdt.entries:
+                    if entry_a['address'] == entry_b['address'] and entry_a['size'] == entry_b['size']:
+                        fdt_same.entries.append(entry_a)
+                        break
+
+        for entry_a in self.entries:
+            found = False
+            for entry_s in fdt_same.entries:
+                if entry_a['address'] == entry_s['address'] and entry_a['size'] == entry_s['size']:
+                    found = True
+                    break
+            if not found:
+                fdt_a.entries.append(entry_a)
+
+        for entry_b in fdt.entries:
+            found = False
+            for entry_s in fdt_same.entries:
+                if entry_b['address'] == entry_s['address'] and entry_b['size'] == entry_s['size']:
+                    found = True
+                    break
+            if not found:
+                fdt_b.entries.append(entry_b)
+
+        fdt_same.rootnode, fdt_a.rootnode, fdt_b.rootnode = self.rootnode.diff(fdt.rootnode)
+
+        return fdt_same, fdt_a, fdt_b
 
     def merge(self, fdt):
         assert isinstance(fdt, FDT), "Invalid object type"
