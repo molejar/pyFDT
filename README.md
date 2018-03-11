@@ -3,7 +3,7 @@
 This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
 created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/doc/imxsb.md)
 
-> Some parts in this module have been reused from https://github.com/superna9999/pyfdt project.
+> Some parts in this module have been inspired from: //github.com/superna9999/pyfdt project.
 
 
 Dependencies
@@ -39,6 +39,9 @@ In case of development, install it from cloned sources:
 Usage
 -----
 
+The API of **fdt** module is flexible and intuitive. Is implementing all general functions for manipulation with dtb/dts
+data or files.
+
 ```python
     import fdt
     
@@ -48,10 +51,10 @@ Usage
     with open("example.dtb", "rb") as f:
         dtb_data = f.read()
         
-    dt = fdt.parse_dtb(dtb_data)
+    dt1 = fdt.parse_dtb(dtb_data)
     
     with open("example.dts", "w") as f:
-        f.write(dt.to_dts())
+        f.write(dt1.to_dts())
         
     #-----------------------------------------------
     # convert *.dts to *.dtb
@@ -59,17 +62,34 @@ Usage
     with open("example.dts", "r") as f:
         dts_text = f.read()
         
-    dt = fdt.parse_dts(dts_text)
+    dt2 = fdt.parse_dts(dts_text)
     
     with open("example.dtb", "wb") as f:
-        f.write(dt.to_dtb(version=17))
+        f.write(dt2.to_dtb(version=17))
+        
+    #-----------------------------------------------
+    # merge two fdt objects
+    # ----------------------------------------------
+    dt1.merge(dt2)
+
+    with open("merged.dtb", "wb") as f:
+        f.write(dt1.to_dtb(version=17))
+        
+    #-----------------------------------------------
+    # diff two fdt objects
+    # ----------------------------------------------
+    out = dt1.diff(dt2)
+    
+    print(out[0]) # same in dt1 and dt2
+    print(out[1]) # specific for dt1
+    print(out[2]) # specific for dt2
 ```
 
 [ pydtc ] Tool
 --------------
 
 The python device tree converter **pydtc** is a tool for conversion *.dts to *.dtb and vice versa. Is distributed
-together with **fdt** module. This tool can be used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
+together with **fdt** module. This tool can be in some cases used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
 
 ```bash
   $ pydtc -?
@@ -84,38 +104,40 @@ Options:
   -?, --help     Show this message and exit.
 
 Commands:
+  diff   Compare two dtb/dts files
   todtb  Convert *.dts to *.dtb
   todts  Convert *.dtb to *.dts
 ```
 
 
-#### $ pydtc todts OUTFILE INFILE
+#### $ pydtc todts [OPTIONS] INFILES
 
 Convert Device Tree in binary blob (*.dtb) to readable text file (*.dts)
 
-**OUTFILE** - The path and name of output file *.dts <br>
-**INFILE** - The path and name of input file *.dtb <br>
+**INFILES** - Single DTB file or list of DTB files
+
+> If used more than one input file, all will be merged into one *.dts
 
 ##### options:
 * **-t, --tabsize** - Tabulator Size
+* **-o, --outfile** - Output path/file name (*.dts)
 * **-?, --help** - Show help message and exit
 
 ##### Example:
 
 ``` bash
-  $ pydtc todts output.dts input.dtb
+  $ pydtc todts test.dtb
     
-    DTS saved as: output.dts
+    DTS saved as: test.dts
 ```
 
-#### $ pydtc todtb OUTFILE INFILES
+#### $ pydtc todtb [OPTIONS] INFILES
 
 Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
 
-> If used more than one input file, all will be merged into one *.dtb
+**INFILES** - Single DTS file or list of DTS files
 
-**OUTFILE** - The path and name of output file *.dtb <br>
-**INFILES** - List of input files *.dts <br>
+> If used more than one input file, all will be merged into one *.dtb
 
 ##### options:
 * **-v, --version** - DTB Version
@@ -124,12 +146,33 @@ Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
 * **-a, --align** - Make the blob align to the <bytes>
 * **-p, --padding** - Add padding to the blob of <bytes> long
 * **-s, --size** - Make the blob at least <bytes> long
+* **-o, --outfile** - Output path/file name (*.dtb)
 * **-?, --help** - Show help message and exit
 
 ##### Example:
 
 ``` bash
-  $ pydtc todtb -v 17 output.dtb input.dts
+  $ pydtc todtb -v 17 test.dts
   
-    DTB saved as: output.dtb
+    DTB saved as: test.dtb
+```
+
+#### $ pydtc diff [OPTIONS] FILE1 FILE2
+
+Compare two dtb/dts files
+
+**FILE1** - Input file 1  <br>
+**FILE2** - Input file 2
+
+##### options:
+* **-t, --intype** - Input file type: 'auto', 'dts', 'dtb' (default: auto)
+* **-o, --outdir** - Output directory/path (default: diff_out)
+* **-?, --help** - Show help message and exit
+
+##### Example:
+
+``` bash
+  $ pydtc diff test1.dtb test2.dtb
+    
+    Diff output saved into: diff_out
 ```

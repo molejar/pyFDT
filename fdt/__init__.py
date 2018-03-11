@@ -41,6 +41,10 @@ __all__     = [
 class FDT(object):
     """ Flattened Device Tree Class """
 
+    @property
+    def empty(self):
+        return True if not self.entries and (self.rootnode is None or self.rootnode.empty) else False
+
     def __init__(self):
         self.header = Header()
         self.entries = []
@@ -55,6 +59,7 @@ class FDT(object):
     def diff(self, fdt):
         assert isinstance(fdt, FDT), "Invalid object type"
         fdt_same = FDT()
+        fdt_same.header = self.header if self.header.version > fdt.header.version else fdt.header
         fdt_a = FDT()
         fdt_a.header = self.header
         fdt_b = FDT()

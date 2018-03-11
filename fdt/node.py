@@ -40,14 +40,6 @@ class Node(object):
         self._name = value
 
     @property
-    def basepath(self):
-        return self._basepath
-
-    @basepath.setter
-    def basepath(self, value):
-        self._basepath = value
-
-    @property
     def parent(self):
         return self._parent
 
@@ -76,6 +68,10 @@ class Node(object):
     @property
     def nodes(self):
         return self._nodes
+
+    @property
+    def empty(self):
+        return False if self.nodes or self.props else True
 
     def __init__(self, name=None, props=None, nodes=None):
         """Init node with name"""
@@ -266,7 +262,7 @@ class Node(object):
         """ Diff two nodes
         :param node: The node object
         :param path: The path to sub-node
-        :return: list of 3 objects (same in A and B, specific A, specific B)
+        :return: list of 3 objects (same in A and B, specific for A, specific for B)
         """
         assert isinstance(node, Node), "Invalid object type"
 
@@ -282,7 +278,7 @@ class Node(object):
         hash_table_b = {}
         for path, props in node.walk():
             hash_table_b[path] = props
-        # compare input tables and generate 3 hash tables: same in A and B, specific A, specific B
+        # compare input tables and generate 3 hash tables: same in A and B, specific for A, specific for B
         diff_tables = [{}, {}, {}]
         for path_a, props_a in hash_table_a.items():
             if path_a in hash_table_b:
@@ -298,7 +294,7 @@ class Node(object):
         for path_b, props_b in hash_table_b.items():
             if path_b not in hash_table_a:
                 diff_tables[2][path_b] = props_b
-        # convert hash tables into 3 nodes: same in A and B, specific A, specific B
+        # convert hash tables into 3 nodes: same in A and B, specific for A, specific for B
         diff_nodes = [Node(self.name), Node(self.name), Node(self.name)]
         for i, d in enumerate(diff_tables):
             for path, props in d.items():
@@ -323,7 +319,7 @@ class Node(object):
             elif replace:
                 self._props[index] = copy(prop)
             else:
-                pass
+                raise Exception("")
 
         for sub_node in node.nodes:
             index = self.get_subnode_index(sub_node.name)
