@@ -171,6 +171,20 @@ class Node(object):
 
         return node
 
+    def find_property(self, name):
+        """ Find property in actual node and all subnodes
+        :param name: The property name
+        :return: 
+        """
+        raise NotImplementedError()
+
+    def find_subnode(self, name):
+        """ Find node in all subnodes
+        :param name: The node name
+        :return:
+        """
+        raise NotImplementedError()
+
     def remove_property(self, name, path=""):
         """ Remove property obj by path/name. Raises ValueError if path/name not exist
         :param name: The property name
@@ -221,8 +235,8 @@ class Node(object):
             raise TypeError("Invalid object type")
 
     def create(self, path):
-        """
-        :param path:
+        """ Create sub-nodes via specified path
+        :param path: Relative path
         """
         assert isinstance(path, str), "The path must be a string type !"
 
@@ -243,6 +257,8 @@ class Node(object):
         :param relative: True for relative or False for absolute return path
         :return: [0 - relative/absolute path, 1 - list of properties]
         """
+        assert isinstance(path, str), "The path must be a string type !"
+
         nodes = []
         subnode = self.get_subnode(path)
         if subnode is None:
@@ -257,52 +273,6 @@ class Node(object):
             if not nodes:
                 break
             subnode = nodes.pop()
-
-    def diff(self, node, path=""):
-        """ Diff two nodes
-        :param node: The node object
-        :param path: The path to sub-node
-        :return: list of 3 objects (same in A and B, specific for A, specific for B)
-        """
-        assert isinstance(node, Node), "Invalid object type"
-
-        subnode = self.get_subnode(path)
-        if subnode is None:
-            raise Exception("{}: Path \"{}\" doesn't exists".format(self, path))
-
-        # prepare hash table A
-        hash_table_a = {}
-        for path, props in self.walk():
-            hash_table_a[path] = props
-        # prepare hash table B
-        hash_table_b = {}
-        for path, props in node.walk():
-            hash_table_b[path] = props
-        # compare input tables and generate 3 hash tables: same in A and B, specific for A, specific for B
-        diff_tables = [{}, {}, {}]
-        for path_a, props_a in hash_table_a.items():
-            if path_a in hash_table_b:
-                props_b = hash_table_b[path_a]
-                props_s = [p for p in props_a if p in props_b]
-                props_a = [p for p in props_a if p not in props_s]
-                props_b = [p for p in props_b if p not in props_s]
-                if props_s: diff_tables[0][path_a] = props_s
-                if props_a: diff_tables[1][path_a] = props_a
-                if props_b: diff_tables[2][path_a] = props_b
-            else:
-                diff_tables[1][path_a] = props_a
-        for path_b, props_b in hash_table_b.items():
-            if path_b not in hash_table_a:
-                diff_tables[2][path_b] = props_b
-        # convert hash tables into 3 nodes: same in A and B, specific for A, specific for B
-        diff_nodes = [Node(self.name), Node(self.name), Node(self.name)]
-        for i, d in enumerate(diff_tables):
-            for path, props in d.items():
-                diff_nodes[i].create(path)
-                for p in props:
-                    diff_nodes[i].append(p, path)
-
-        return diff_nodes
 
     def merge(self, node, replace=True):
         """ Merge two nodes and subnodes.
@@ -359,3 +329,49 @@ class Node(object):
         pos += 4
         blob += pack('>I', DTB_END_NODE)
         return blob, strings, pos
+
+    @staticmethod
+    def diff(node_a, node_b):
+        """ Diff two nodes
+        :param node_a: The object of node A
+        :param node_b: The object of node B
+        :return: list of 3 objects (same in A and B, specific for A, specific for B)
+        """
+        assert isinstance(node_a, Node), "Invalid object type"
+        assert isinstance(node_b, Node), "Invalid object type"
+        # prepare hash table A
+        hash_table_a = {}
+        for path, props in node_a.walk():
+            hash_table_a[path] = props
+        # prepare hash table B
+        hash_table_b = {}
+        for path, props in node_b.walk():
+            hash_table_b[path] = props
+        # compare input tables and generate 3 hash tables: same in A and B, specific for A, specific for B
+        diff_tables = [{}, {}, {}]
+        for path_a, props_a in hash_table_a.items():
+            if path_a in hash_table_b:
+                props_b = hash_table_b[path_a]
+                props_s = [p for p in props_a if p in props_b]
+                props_a = [p for p in props_a if p not in props_s]
+                props_b = [p for p in props_b if p not in props_s]
+                if props_s:
+                    diff_tables[0][path_a] = props_s
+                if props_a:
+                    diff_tables[1][path_a] = props_a
+                if props_b:
+                    diff_tables[2][path_a] = props_b
+            else:
+                diff_tables[1][path_a] = props_a
+        for path_b, props_b in hash_table_b.items():
+            if path_b not in hash_table_a:
+                diff_tables[2][path_b] = props_b
+        # convert hash tables into 3 nodes: same in A and B, specific for A, specific for B
+        diff_nodes = [Node(node_a.name), Node(node_a.name), Node(node_b.name)]
+        for i, d in enumerate(diff_tables):
+            for path, props in d.items():
+                diff_nodes[i].create(path)
+                for p in props:
+                    diff_nodes[i].append(p, path)
+
+        return diff_nodes

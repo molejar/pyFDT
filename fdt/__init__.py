@@ -34,7 +34,8 @@ __all__     = [
     'PropStrings',
     # core methods
     'parse_dts',
-    'parse_dtb'
+    'parse_dtb',
+    'diff'
 ]
 
 
@@ -51,48 +52,22 @@ class FDT(object):
         self.rootnode = None
 
     def info(self):
-        pass
+        for path, props in self.rootnode.walk():
+            print("{} - {} props".format(path, len(props)))
+
+    def get_node(self, name, path=""):
+        assert self.rootnode is not None, "Root node not defined"
+        if name == '/' and path == "":
+            return self.rootnode
+        else:
+            return self.rootnode.get_subnode(name, path)
+
+    def get_property(self, name, path=""):
+        assert self.rootnode is not None, "Root node not defined"
+        return self.rootnode.get_property(name, path)
 
     def walk(self):
         return self.rootnode.walk()
-
-    def diff(self, fdt):
-        assert isinstance(fdt, FDT), "Invalid object type"
-        fdt_same = FDT()
-        fdt_same.header = self.header if self.header.version > fdt.header.version else fdt.header
-        fdt_a = FDT()
-        fdt_a.header = self.header
-        fdt_b = FDT()
-        fdt_b.header = fdt.header
-
-        if self.entries and fdt.entries:
-            for entry_a in self.entries:
-                for entry_b in fdt.entries:
-                    if entry_a['address'] == entry_b['address'] and entry_a['size'] == entry_b['size']:
-                        fdt_same.entries.append(entry_a)
-                        break
-
-        for entry_a in self.entries:
-            found = False
-            for entry_s in fdt_same.entries:
-                if entry_a['address'] == entry_s['address'] and entry_a['size'] == entry_s['size']:
-                    found = True
-                    break
-            if not found:
-                fdt_a.entries.append(entry_a)
-
-        for entry_b in fdt.entries:
-            found = False
-            for entry_s in fdt_same.entries:
-                if entry_b['address'] == entry_s['address'] and entry_b['size'] == entry_s['size']:
-                    found = True
-                    break
-            if not found:
-                fdt_b.entries.append(entry_b)
-
-        fdt_same.rootnode, fdt_a.rootnode, fdt_b.rootnode = self.rootnode.diff(fdt.rootnode)
-
-        return fdt_same, fdt_a, fdt_b
 
     def merge(self, fdt):
         assert isinstance(fdt, FDT), "Invalid object type"
@@ -255,7 +230,12 @@ def parse_dts(text, root_dir=''):
 
 
 def parse_dtb(data):
-    """ Parse FDT Binary Blob and create FDT Object """
+    """ Parse FDT Binary Blob and create FDT Object
+    :param data: FDT Binary Blob as bytes or bytearray
+    :return FDT object
+    """
+    assert isinstance(data, (bytes, bytearray)), "Invalid argument type"
+
     from struct import unpack_from
 
     fdt_obj = FDT()
@@ -312,4 +292,47 @@ def parse_dtb(data):
     return fdt_obj
 
 
+def diff(fdt1, fdt2):
+    """ Diff two flattened device tree objects
+    :param fdt1: The object 1 of FDT
+    :param fdt2: The object 2 of FDT
+    :return: list of 3 objects (same in 1 and 2, specific for 1, specific for 2)
+    """
+    assert isinstance(fdt1, FDT), "Invalid argument type"
+    assert isinstance(fdt2, FDT), "Invalid argument type"
 
+    fdt_same = FDT()
+    fdt_same.header = fdt1.header if fdt1.header.version > fdt2.header.version else fdt2.header
+    fdt_a = FDT()
+    fdt_a.header = fdt1.header
+    fdt_b = FDT()
+    fdt_b.header = fdt2.header
+
+    if fdt1.entries and fdt2.entries:
+        for entry_a in fdt1.entries:
+            for entry_b in fdt2.entries:
+                if entry_a['address'] == entry_b['address'] and entry_a['size'] == entry_b['size']:
+                    fdt_same.entries.append(entry_a)
+                    break
+
+    for entry_a in fdt1.entries:
+        found = False
+        for entry_s in fdt_same.entries:
+            if entry_a['address'] == entry_s['address'] and entry_a['size'] == entry_s['size']:
+                found = True
+                break
+        if not found:
+            fdt_a.entries.append(entry_a)
+
+    for entry_b in fdt2.entries:
+        found = False
+        for entry_s in fdt_same.entries:
+            if entry_b['address'] == entry_s['address'] and entry_b['size'] == entry_s['size']:
+                found = True
+                break
+        if not found:
+            fdt_b.entries.append(entry_b)
+
+    fdt_same.rootnode, fdt_a.rootnode, fdt_b.rootnode = Node.diff(fdt1.rootnode, fdt2.rootnode)
+
+    return fdt_same, fdt_a, fdt_b

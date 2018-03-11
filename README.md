@@ -9,7 +9,7 @@ created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/
 Dependencies
 ------------
 
-- [Python 3](https://www.python.org) - The interpreter
+- [Python](https://www.python.org) - Python 3.x interpreter
 - [Click](http://click.pocoo.org/6) - Python package for creating beautiful command line interface.
 
 Installation
@@ -39,8 +39,7 @@ In case of development, install it from cloned sources:
 Usage
 -----
 
-The API of **fdt** module is flexible and intuitive. Is implementing all general functions for manipulation with dtb/dts
-data or files.
+The API of **fdt** module is intuitive and implementing all general requirements for manipulation with FDT Nodes, Properties and dts/dtb files.
 
 ```python
     import fdt
@@ -78,7 +77,7 @@ data or files.
     #-----------------------------------------------
     # diff two fdt objects
     # ----------------------------------------------
-    out = dt1.diff(dt2)
+    out = fdt.diff(dt1, dt2)
     
     print(out[0]) # same in dt1 and dt2
     print(out[1]) # specific for dt1

@@ -175,7 +175,7 @@ def diff(file1, file2, intype, outdir):
         fdt1 = open_fdt(file1, intype)
         fdt2 = open_fdt(file2, intype)
         # compare it
-        diff = fdt1.diff(fdt2)
+        diff = fdt.diff(fdt1, fdt2)
         if diff[0].empty:
             click.echo(" Input files are completely different !")
             sys.exit()
