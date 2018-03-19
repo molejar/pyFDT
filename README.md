@@ -1,5 +1,7 @@
 # Flattened Device Tree Python Module 
 
+[![Build Status](https://travis-ci.org/molejar/pyFDT.svg?branch=master)](https://travis-ci.org/molejar/pyFDT)
+
 This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
 created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/doc/imxsb.md)
 

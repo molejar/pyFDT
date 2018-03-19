@@ -4,4 +4,4 @@ python:
 install:
   - pip install .
 script:
-  - python tests/test01.py
+  - python test/test01.py
