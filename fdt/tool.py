@@ -39,46 +39,35 @@ def cli():
 
 
 @cli.command(short_help="Convert *.dtb to *.dts")
-@click.argument('infiles', nargs=-1, type=click.Path(exists=True))
+@click.argument('infile', nargs=1, type=click.Path(exists=True))
 @click.option('-t', '--tabsize', type=click.INT, default=4, show_default=True, help="Tabulator Size")
 @click.option('-o', '--outfile', type=click.Path(), default=None, help="Output path/file name (*.dts)")
-def todts(outfile, infiles, tabsize):
-    """ Convert device tree binary blob (*.dtb) to readable text file (*.dts) """
+def todts(outfile, infile, tabsize):
+    """ Convert device tree binary blob (*.dtb) into readable text file (*.dts) """
     fdt_obj = None
 
-    if not infiles:
-        click.echo("Usage: pydtc todts [OPTIONS] [INFILES]...")
-        click.echo("\nERROR: Missing argument \"infiles\"")
-        sys.exit(ERROR_CODE)
-
     if outfile is None:
-        outfile = os.path.splitext(os.path.basename(infiles[0]))[0] + ".dts"
+        outfile = os.path.splitext(os.path.basename(infile))[0] + ".dts"
 
     try:
-        for file in infiles:
-            with open(file, 'rb') as f:
-                try:
-                    obj = fdt.parse_dtb(f.read())
-                except:
-                    raise Exception('Not supported file format: {}'.format(file))
-
-            if fdt_obj is None:
-                fdt_obj = obj
-            else:
-                fdt_obj.merge(obj)
+        with open(infile, 'rb') as f:
+            try:
+                fdt_obj = fdt.parse_dtb(f.read())
+            except:
+                raise Exception('Not supported file format: {}'.format(infile))
 
         with open(outfile, 'w') as f:
             f.write(fdt_obj.to_dts(tabsize))
 
     except Exception as e:
-        click.echo(" ERROR: {}".format(str(e) if str(e) else "Unknown!"))
+        click.echo(" Error: {}".format(str(e) if str(e) else "Unknown!"))
         sys.exit(ERROR_CODE)
 
     click.secho(" DTS saved as: %s" % outfile)
 
 
 @cli.command(short_help="Convert *.dts to *.dtb")
-@click.argument('infiles', nargs=-1, type=click.Path(exists=True))
+@click.argument('infile', nargs=1, type=click.Path(exists=True))
 @click.option('-v', '--version', type=click.INT, default=None, help="DTB Version")
 @click.option('-l', '--lcversion', type=click.INT, default=None, help="DTB Last Compatible Version")
 @click.option('-c', '--cpuid', type=click.INT, default=None, help="Boot CPU ID")
@@ -86,33 +75,22 @@ def todts(outfile, infiles, tabsize):
 @click.option('-p', '--padding', type=click.INT, default=None, help="Add padding to the blob of <bytes> long")
 @click.option('-s', '--size', type=click.INT, default=None, help="Make the blob at least <bytes> long")
 @click.option('-o', '--outfile', type=click.Path(), default=None, help="Output path/file name (*.dtb)")
-def todtb(outfile, infiles, version, lcversion, cpuid, align, padding, size):
-    """ Convert device tree in readable text file (*.dts) to binary blob (*.dtb) """
+def todtb(outfile, infile, version, lcversion, cpuid, align, padding, size):
+    """ Convert device tree as readable text file (*.dts) into binary blob (*.dtb) """
     fdt_obj = None
 
-    if not infiles:
-        click.echo("Usage: pydtc todtb [OPTIONS] [INFILES]...")
-        click.echo("\nERROR: Missing argument \"infiles\"")
-        sys.exit(ERROR_CODE)
-
     if outfile is None:
-        outfile = os.path.splitext(os.path.basename(infiles[0]))[0] + ".dtb"
+        outfile = os.path.splitext(os.path.basename(infile))[0] + ".dtb"
 
     try:
         if version is not None and version > fdt.Header.MAX_VERSION:
             raise Exception("DTB Version must be lover or equal {} !".format(fdt.Header.MAX_VERSION))
 
-        for file in infiles:
-            with open(file, 'r') as f:
-                try:
-                    obj = fdt.parse_dts(f.read(), os.path.dirname(file))
-                except:
-                    raise Exception('Not supported file format: {}'.format(file))
-
-            if fdt_obj is None:
-                fdt_obj = obj
-            else:
-                fdt_obj.merge(obj)
+        with open(infile, 'r') as f:
+            try:
+                fdt_obj = fdt.parse_dts(f.read(), os.path.dirname(infile))
+            except:
+                raise Exception('Not supported file format: {}'.format(infile))
 
         raw_data = fdt_obj.to_dtb(version, lcversion, cpuid)
 
@@ -138,20 +116,77 @@ def todtb(outfile, infiles, version, lcversion, cpuid, align, padding, size):
             f.write(raw_data)
 
     except Exception as e:
-        click.echo(" ERROR: {}".format(str(e) if str(e) else "Unknown!"))
+        click.echo(" Error: {}".format(str(e) if str(e) else "Unknown!"))
         sys.exit(ERROR_CODE)
 
     click.secho(" DTB saved as: %s" % outfile)
 
 
-@cli.command(short_help="Compare two dtb/dts files")
+@cli.command(short_help="Merge two and more *.dtb or *.dts files")
+@click.argument('outfile', nargs=1, type=click.Path())
+@click.argument('infiles', nargs=-1, type=click.Path(exists=True))
+@click.option('-t', '--tabsize', type=click.INT, default=4, show_default=True, help="Tabulator Size")
+@click.option('-i', '--intype', type=click.Choice(['auto', 'dts', 'dtb']),
+              default='auto', show_default=True, help="Input file type")
+def merge(outfile, infiles, tabsize, intype):
+    """ Merge two and more *.dtb or *.dts files into one *.dts file """
+    def open_fdt(file_path, file_type):
+        if file_type == 'auto':
+            if file_path.endswith(".dtb"):
+                file_type = 'dtb'
+            elif file_path.endswith(".dts"):
+                file_type = 'dts'
+            else:
+                pass
+        try:
+            if file_type == 'dtb':
+                with open(file_path, 'rb') as f:
+                    obj = fdt.parse_dtb(f.read())
+            else:
+                with open(file_path, 'r') as f:
+                    obj = fdt.parse_dts(f.read(), os.path.dirname(file_path))
+        except:
+            raise Exception('Not supported file format: {}'.format(file_path))
+
+        return obj
+
+    fdt_obj = None
+
+    if not infiles:
+        click.echo("Usage: pydtc todtb [OPTIONS] [INFILES]...")
+        click.echo("\nError: Missing argument \"infiles\"")
+        sys.exit(ERROR_CODE)
+
+    if len(infiles) < 2:
+        click.echo("Usage: pydtc todtb [OPTIONS] [INFILES]...")
+        click.echo("\nError: Minimum is two \"infiles\"")
+        sys.exit(ERROR_CODE)
+
+    try:
+        for file in infiles:
+            if fdt_obj is None:
+                fdt_obj = open_fdt(file, intype)
+            else:
+                fdt_obj.merge(open_fdt(file, intype))
+
+        with open(outfile, 'w') as f:
+            f.write(fdt_obj.to_dts(tabsize))
+
+    except Exception as e:
+        click.echo(" Error: {}".format(str(e) if str(e) else "Unknown!"))
+        sys.exit(ERROR_CODE)
+
+    click.secho(" Merge output saved as: %s" % outfile)
+
+
+@cli.command(short_help="Compare two *.dtb or *.dts files")
 @click.argument('file1', nargs=1, type=click.Path(exists=True))
 @click.argument('file2', nargs=1, type=click.Path(exists=True))
 @click.option('-t', '--intype', type=click.Choice(['auto', 'dts', 'dtb']),
               default='auto', show_default=True, help="Input file type")
 @click.option('-o', '--outdir', type=click.Path(), default=None, help="Output directory/path [default: diff_out]")
 def diff(file1, file2, intype, outdir):
-    """ Compare two dtb/dts files """
+    """ Compare two *.dtb or *.dts files """
 
     def open_fdt(file_path, file_type):
         if file_type == 'auto':
@@ -161,13 +196,15 @@ def diff(file1, file2, intype, outdir):
                 file_type = 'dts'
             else:
                 pass
-
-        if file_type == 'dtb':
-            with open(file_path, 'rb') as f:
-                obj = fdt.parse_dtb(f.read())
-        else:
-            with open(file_path, 'r') as f:
-                obj = fdt.parse_dts(f.read())
+        try:
+            if file_type == 'dtb':
+                with open(file_path, 'rb') as f:
+                    obj = fdt.parse_dtb(f.read())
+            else:
+                with open(file_path, 'r') as f:
+                    obj = fdt.parse_dts(f.read(), os.path.dirname(file_path))
+        except:
+            raise Exception('Not supported file format: {}'.format(file_path))
 
         return obj
 
@@ -195,7 +232,7 @@ def diff(file1, file2, intype, outdir):
                     f.write(obj.to_dts())
 
     except Exception as e:
-        click.echo(" ERROR: {}".format(str(e) if str(e) else "Unknown!"))
+        click.echo(" Error: {}".format(str(e) if str(e) else "Unknown!"))
         sys.exit(ERROR_CODE)
 
     click.secho(" Diff output saved into: %s" % outdir)

@@ -1,6 +1,5 @@
 
 import fdt
-import copy
 import struct
 import unittest
 
@@ -47,9 +46,9 @@ class PropertyTestCase(unittest.TestCase):
         prop = fdt.Property('prop')
         self.assertIsInstance(prop, fdt.Property)
         self.assertEqual(prop.name, 'prop')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             prop = fdt.Property('prop\0')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             prop = fdt.Property(5)
 
     def test_compare(self):
@@ -83,23 +82,23 @@ class PropStringsTestCase(unittest.TestCase):
         self.assertIsInstance(prop, fdt.PropStrings)
         self.assertEqual(prop.name, 'prop')
         self.assertEqual(len(prop), 2)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             prop.append('test\0')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AssertionError):
             prop.append(5)
 
     def test_compare(self):
-        prop1 = fdt.PropStrings('prop', ['test', 'test'])
-        prop2 = fdt.PropStrings('prop', ['test', 'test', 'test'])
+        prop1 = fdt.PropStrings('prop', 'test', 'test')
+        prop2 = fdt.PropStrings('prop', 'test', 'test', 'test')
         self.assertEqual(prop1, prop1)
         self.assertNotEqual(prop1, prop2)
         prop1.append("test")
         self.assertEqual(prop1, prop2)
-        prop1.name = 'prop1'
+        prop1.append("test")
         self.assertNotEqual(prop1, prop2)
 
     def test_export(self):
-        prop = fdt.PropStrings('prop', ['test', 'test'])
+        prop = fdt.PropStrings('prop', 'test', 'test')
         str_data = prop.to_dts()
         self.assertEqual(str_data, 'prop = "test", "test";\n')
 
@@ -107,8 +106,8 @@ class PropStringsTestCase(unittest.TestCase):
 class PropWordsTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.prop_a = fdt.PropWords('prop', [0x11111111, 0x55555555])
-        self.prop_b = fdt.PropWords('prop', [0x11111111, 0x55555555, 0x00])
+        self.prop_a = fdt.PropWords('prop', 0x11111111, 0x55555555)
+        self.prop_b = fdt.PropWords('prop', 0x11111111, 0x55555555, 0x00)
 
     def tearDown(self):
         pass
@@ -119,9 +118,9 @@ class PropWordsTestCase(unittest.TestCase):
         self.assertEqual(len(self.prop_a), 2)
         self.prop_a.append(0x00)
         self.assertEqual(len(self.prop_a), 3)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AssertionError):
             self.prop_a.append('test')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             self.prop_a.append(0x5555555555)
 
     def test_compare(self):
@@ -129,7 +128,7 @@ class PropWordsTestCase(unittest.TestCase):
         self.assertNotEqual(self.prop_a, self.prop_b)
         self.prop_a.append(0x00)
         self.assertEqual(self.prop_a, self.prop_b)
-        self.prop_a.name = 'prop1'
+        self.prop_a.append(0x00)
         self.assertNotEqual(self.prop_a, self.prop_b)
 
     def test_export(self):
@@ -152,9 +151,9 @@ class PropBytesTestCase(unittest.TestCase):
         self.assertEqual(len(self.prop_a), 2)
         self.prop_a.append(0x00)
         self.assertEqual(len(self.prop_a), 3)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AssertionError):
             self.prop_a.append('test')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             self.prop_a.append(256)
 
     def test_compare(self):
@@ -162,7 +161,7 @@ class PropBytesTestCase(unittest.TestCase):
         self.assertNotEqual(self.prop_a, self.prop_b)
         self.prop_a.append(0x00)
         self.assertEqual(self.prop_a, self.prop_b)
-        self.prop_a.name = 'prop1'
+        self.prop_a.append(0x00)
         self.assertNotEqual(self.prop_a, self.prop_b)
 
     def test_export(self):
@@ -175,8 +174,8 @@ class NodeTestCase(unittest.TestCase):
     def setUp(self):
         self.node_a = fdt.Node('/')
         self.node_a.append(fdt.Property('prop'))
-        self.node_a.append(fdt.PropStrings('prop_str', ['test', 'test']))
-        self.node_a.append(fdt.PropWords('prop_word', [0x11111111, 0x55555555]))
+        self.node_a.append(fdt.PropStrings('prop_str', 'test', 'test'))
+        self.node_a.append(fdt.PropWords('prop_word', 0x11111111, 0x55555555))
         self.node_a.append(fdt.PropBytes('prop_byte', [0x10, 0x50]))
         self.node_a.append(fdt.Node('sub_node'))
 
@@ -197,31 +196,31 @@ class NodeTestCase(unittest.TestCase):
 
     def test_compare(self):
         self.assertEqual(self.node_a, self.node_a)
-        node_b = copy.deepcopy(self.node_a)
+        node_b = self.node_a.copy()
         self.assertEqual(self.node_a, node_b)
         node_b.append(fdt.PropBytes('prop_next', [0x10, 0x50]))
         self.assertNotEqual(self.node_a, node_b)
 
     def test_append(self):
-        root_node = copy.deepcopy(self.node_a)
-        root_node.append(fdt.Node('node_a', [fdt.Property('prop_a')]), 'sub_node')
-        root_node.append(fdt.Node('node_b', [fdt.Property('prop_b')]), 'sub_node/node_a')
-        root_node.append(fdt.Node('node_c', [fdt.Property('prop_c')]), 'sub_node/node_a/node_b')
-        node = root_node.get_subnode('sub_node/node_a/node_b/node_c')
+        root_node = self.node_a.copy()
+        root_node.append(fdt.Node('node_a', props=[fdt.Property('prop_a')]))
+        root_node.append(fdt.Node('node_b', props=[fdt.Property('prop_b')]))
+        root_node.append(fdt.Node('node_c', props=[fdt.Property('prop_c')]))
+        node = root_node.get_subnode('node_a')
         self.assertIsInstance(node, fdt.Node)
-        prop = root_node.get_property('sub_node/node_a/node_b/node_c/prop_c')
+        prop = node.get_property('prop_a')
         self.assertIsInstance(prop, fdt.Property)
-        root_node.remove_property('sub_node/node_a/node_b/node_c/prop_c')
-        prop = root_node.get_property('sub_node/node_a/node_b/node_c/prop_c')
+        node.remove_property('prop_a')
+        prop = node.get_property('prop_a')
         self.assertIsNone(prop, fdt.Property)
 
     def test_merge(self):
-        root_node = copy.deepcopy(self.node_a)
-        root_node.append(fdt.Node('node_a', [fdt.Property('prop_a')]), 'sub_node')
-        root_node.append(fdt.Node('node_b', [fdt.Property('prop_b')]), 'sub_node/node_a')
-        root_node.append(fdt.Node('node_c', [fdt.Property('prop_c')]), 'sub_node/node_a/node_b')
-        node = copy.deepcopy(self.node_a)
-        node.name = "test_node"
+        root_node = self.node_a.copy()
+        root_node.append(fdt.Node('node_a', props=[fdt.Property('prop_a')]))
+        root_node.append(fdt.Node('node_b', props=[fdt.Property('prop_b')]))
+        root_node.append(fdt.Node('node_c', props=[fdt.Property('prop_c')]))
+        node = self.node_a.copy()
+        node.set_name("test_node")
         root_node.merge(node)
         self.assertNotEqual(root_node, node)
 

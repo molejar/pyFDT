@@ -67,7 +67,7 @@ The API of **fdt** module is intuitive and implementing all general requirements
         f.write(dt2.to_dtb(version=17))
         
     #-----------------------------------------------
-    # merge two fdt objects
+    # merge dt2 into dt1
     # ----------------------------------------------
     dt1.merge(dt2)
 
@@ -109,13 +109,11 @@ Commands:
 ```
 
 
-#### $ pydtc todts [OPTIONS] INFILES
+#### $ pydtc todts [OPTIONS] INFILE
 
 Convert Device Tree in binary blob (*.dtb) to readable text file (*.dts)
 
-**INFILES** - Single DTB file or list of DTB files
-
-> If used more than one input file, all will be merged into one *.dts
+**INFILE** - Single DTB file as *.dtb
 
 ##### options:
 * **-t, --tabsize** - Tabulator Size
@@ -130,13 +128,11 @@ Convert Device Tree in binary blob (*.dtb) to readable text file (*.dts)
     DTS saved as: test.dts
 ```
 
-#### $ pydtc todtb [OPTIONS] INFILES
+#### $ pydtc todtb [OPTIONS] INFILE
 
 Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
 
-**INFILES** - Single DTS file or list of DTS files
-
-> If used more than one input file, all will be merged into one *.dtb
+**INFILE** - Single DTS file as *.dts
 
 ##### options:
 * **-v, --version** - DTB Version
@@ -154,6 +150,26 @@ Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
   $ pydtc todtb -v 17 test.dts
   
     DTB saved as: test.dtb
+```
+
+#### $ pydtc merge [OPTIONS] OUTFILE [INFILES]
+
+Merge two and more *.dtb or *.dts files into one *.dts file
+
+**OUTFILE** - The output file name (*.dts)  <br>
+**INFILES** - Two or more input files with (*.dtb or *.dts) extension
+
+##### options:
+* **-t, --tabsize** - Tabulator Size
+* **-t, --intype** - Input file type: 'auto', 'dts', 'dtb' (default: auto)
+* **-?, --help** - Show help message and exit
+
+##### Example:
+
+``` bash
+  $ pydtc merge out.dtb test1.dtb test2.dtb
+    
+    Merge output saved as: out.dtb
 ```
 
 #### $ pydtc diff [OPTIONS] FILE1 FILE2

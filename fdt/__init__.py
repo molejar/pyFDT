@@ -166,7 +166,7 @@ class FDT(object):
             if not nodes: break
             node = nodes.pop()
 
-    def merge(self, fdt_obj):
+    def merge(self, fdt_obj, replace=True):
         """ Merge external FDT object into this object.
         :param fdt_obj: The FDT object which will be merged into this
         """
@@ -188,7 +188,7 @@ class FDT(object):
                 if not exist:
                     self.entries.append(in_entry)
 
-        self.root_node.merge(fdt_obj.get_node('/'))
+        self.root_node.merge(fdt_obj.get_node('/'), replace)
 
     def to_dts(self, tabsize=4):
         """ Store FDT Object into string format (DTS)

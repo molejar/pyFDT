@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy, copy
+from copy import copy
 from struct import unpack, pack
 from string import printable
 
@@ -73,7 +73,11 @@ class BaseItem(object):
         return '/' + '/'.join(path[::-1])
 
     def __init__(self, name, **kwargs):
-        """Init with name"""
+        """ Init BaseItem
+        :param name: Item name
+        :param parent: Item parent
+        :return Item object
+        """
         assert isinstance(name, str), "The value must be a string type !"
         assert all(c in printable for c in name), "The value must contain just printable chars !"
         assert 'parent' not in kwargs or isinstance(kwargs['parent'], Node), "Invalid object type"
@@ -87,6 +91,11 @@ class BaseItem(object):
     def __ne__(self, node):
         """Check node inequality"""
         return not self.__eq__(node)
+
+    def set_name(self, value):
+        assert isinstance(value, str), "The value must be a string type !"
+        assert all(c in printable for c in value), "The value must contain just printable chars !"
+        self._name = value
 
     def set_parent(self, value):
         assert isinstance(value, Node), "Invalid object type"
@@ -106,7 +115,11 @@ class BaseItem(object):
 class Property(BaseItem):
 
     def __init__(self, name, **kwargs):
-        """Init with name"""
+        """ Property init.
+        :param name: Property name
+        :param parent: Property parent
+        :return Property object
+        """
         super().__init__(name, **kwargs)
 
     def __str__(self):
@@ -124,9 +137,6 @@ class Property(BaseItem):
         if self.name != prop.name:
             return False
         return True
-
-    def __copy__(self):
-        return Property(self.name)
 
     def copy(self):
         return Property(self.name)
@@ -149,7 +159,12 @@ class PropStrings(Property):
     """Property with strings as value"""
 
     def __init__(self, name, *args, **kwargs):
-        """Init with strings"""
+        """ Init property strings
+        :param name: Property name
+        :param args: str1, str2, ...
+        :param parent: Property parent
+        :return Property object
+        """
         super().__init__(name, **kwargs)
         self.data = []
         for arg in args:
@@ -179,9 +194,6 @@ class PropStrings(Property):
             if self.data[index] != prop[index]:
                 return False
         return True
-
-    def __copy__(self):
-        return PropStrings(self.name, *self.data)
 
     def copy(self):
         return PropStrings(self.name, *self.data)
@@ -230,10 +242,10 @@ class PropWords(Property):
     """Property with words as value"""
 
     def __init__(self, name, *args, **kwargs):
-        """Init with words
-        :param name:
-        :param args:
-        :param kwargs:
+        """Init property words
+        :param name: Property name
+        :param args: word1, word2, ...
+        :param kwargs - optional arguments
                data:
                wsize:
         """
@@ -279,6 +291,7 @@ class PropWords(Property):
         return PropWords(self.name, *self.data, wsize=self.word_size)
 
     def append(self, value):
+        assert isinstance(value, int), "Invalid object type"
         assert 0 <= value < 2**self.word_size, "Invalid word value {}, use <0x0 - 0x{:X}>".format(
             value, 2**self.word_size - 1)
         self.data.append(value)
@@ -315,7 +328,12 @@ class PropBytes(Property):
     """Property with bytes as value"""
 
     def __init__(self, name, data=None):
-        """Init with bytes"""
+        """ Init property bytes
+        :param name: Property name
+        :param data: Data as list, bytes or bytearray
+        :param parent: Property parent
+        :return Property object
+        """
         super().__init__(name)
         self.data = bytearray() if data is None else bytearray(data)
 
@@ -351,6 +369,7 @@ class PropBytes(Property):
         return PropBytes(self.name, self.data)
 
     def append(self, value):
+        assert isinstance(value, int), "Invalid object type"
         assert 0 <= value <= 0xFF, "Invalid byte value {}, use <0 - 255>".format(value)
         self.data.append(value)
 
@@ -403,7 +422,11 @@ class Node(BaseItem):
         return False if self.nodes or self.props else True
 
     def __init__(self, name, **kwargs):
-        """Init node with name"""
+        """ Create Node item
+        :param name: Node name
+        :param props: List of properties
+        :param nodes: List of sub-nodes
+        """
         assert 'props' not in kwargs or isinstance(kwargs['props'], list), "Invalid object type"
         assert 'nodes' not in kwargs or isinstance(kwargs['nodes'], list), "Invalid object type"
         super().__init__(name, **kwargs)
@@ -430,6 +453,17 @@ class Node(BaseItem):
             if n not in node.nodes:
                 return False
         return True
+
+    def copy(self):
+        """ Create a copy of Node object """
+        node = Node(self.name)
+
+        for p in self.props:
+            node.append(p.copy())
+        for n in self.nodes:
+            node.append(n.copy())
+
+        return node
 
     def get_property(self, name):
         """ Get property obj by path/name
@@ -490,11 +524,11 @@ class Node(BaseItem):
         else:
             raise TypeError("Invalid object type")
 
-    def merge(self, node, replace=True):
+    def merge(self, node_obj, replace=True):
         """ Merge two nodes and subnodes.
             Replace current properties with the given properties if replace is True.
         """
-        assert isinstance(node, Node), "Invalid object type"
+        assert isinstance(node_obj, Node), "Invalid object type"
 
         def get_property_index(name):
             for i, p in enumerate(self.props):
@@ -508,7 +542,7 @@ class Node(BaseItem):
                     return i
             return None
 
-        for prop in node.props:
+        for prop in node_obj.props:
             index = get_property_index(prop.name)
             if index is None:
                 self.append(prop.copy())
@@ -519,10 +553,10 @@ class Node(BaseItem):
             else:
                 pass
 
-        for sub_node in node.nodes:
+        for sub_node in node_obj.nodes:
             index = get_subnode_index(sub_node.name)
             if index is None:
-                self._nodes.append(deepcopy(sub_node))
+                self.append(sub_node.copy())
             elif sub_node in self._nodes:
                 continue
             else:
