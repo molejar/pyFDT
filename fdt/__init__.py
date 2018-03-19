@@ -14,9 +14,8 @@
 
 import os
 
-from .node import Node
-from .prop import Property, PropBytes, PropWords, PropStrings
-from .head import Header, DTB_BEGIN_NODE, DTB_END_NODE, DTB_NOP, DTB_PROP, DTB_END
+from .head import Header, DTB_BEGIN_NODE, DTB_END_NODE, DTB_PROP, DTB_END, DTB_NOP
+from .item import new_property, Property, PropBytes, PropWords, PropStrings, Node
 from .misc import strip_comments, split_to_lines, get_version_info, extract_string
 
 __author__  = "Martin Olejar"
@@ -29,6 +28,8 @@ __all__     = [
     'FDT',
     'Node',
     'Header',
+    # properties
+    'Property',
     'PropBytes',
     'PropWords',
     'PropStrings',
@@ -39,46 +40,145 @@ __all__     = [
 ]
 
 
+class ItemType:
+    NODE = 0
+    PROP = 1
+    BOTH = 3
+
+
 class FDT(object):
     """ Flattened Device Tree Class """
 
     @property
     def empty(self):
-        return True if not self.entries and (self.rootnode is None or self.rootnode.empty) else False
+        return self.root_node.empty
 
-    def __init__(self):
-        self.header = Header()
+    def __init__(self, header=None):
+        self.header = Header() if header is None else header
         self.entries = []
-        self.rootnode = None
+        self.root_node = Node('/')
+
+    def __str__(self):
+        """String representation"""
+        return self.info()
 
     def info(self):
-        for path, props in self.rootnode.walk():
-            print("{} - {} props".format(path, len(props)))
+        """ Return object info in human readable format """
+        msg = "FDT Content:\n"
+        for path, nodes, props in self.walk():
+            msg += "{} [{}N, {}P]\n".format(path, len(nodes), len(props))
+        return msg
 
-    def get_node(self, name, path=""):
-        assert self.rootnode is not None, "Root node not defined"
-        if name == '/' and path == "":
-            return self.rootnode
-        else:
-            return self.rootnode.get_subnode(name, path)
+    def get_node(self, path, create=False):
+        """ Get node from specified path
+        :param path: Path as string
+        :param create: If True, not existing nodes will be created
+        :return: Node object
+        """
+        assert isinstance(path, str), "Node path must be a string type !"
 
-    def get_property(self, name, path=""):
-        assert self.rootnode is not None, "Root node not defined"
-        return self.rootnode.get_property(name, path)
+        node = self.root_node
+        path = path.lstrip('/')
+        if path:
+            names = path.split('/')
+            for name in names:
+                item = node.get_subnode(name)
+                if item is None:
+                    if create:
+                        item = Node(name)
+                        node.append(item)
+                    else:
+                        raise ValueError("Path \"{}\" doesn't exists".format(self, path))
+                node = item
 
-    def walk(self):
-        return self.rootnode.walk()
+        return node
 
-    def merge(self, fdt):
-        assert isinstance(fdt, FDT), "Invalid object type"
+    def get_property(self, name, path=''):
+        """ Get property obj by name
+        :param name: Property name
+        :param path: Path to sub-node
+        :return: property object
+        """
+        return self.get_node(path).get_property(name)
+
+    def remove_node(self, name, path=''):
+        """ Remove node obj by path/name. Raises ValueError if path/name doesn't exist
+        :param name: Node name
+        :param path: Path to sub-node
+        """
+        self.get_node(path).remove_subnode(name)
+
+    def remove_property(self, name, path=''):
+        """ Remove property obj by name. Raises ValueError if path/name doesn't exist
+        :param name: Property name
+        :param path: Path to sub-node
+        """
+        self.get_node(path).remove_property(name)
+
+    def add_item(self, obj, path='', create=True):
+        """ add sub-node or property at specified path. Raises ValueError if path doesn't exist
+        :param obj: The node or property object
+        :param path: The path to sub-node
+        :param create: If True, not existing nodes will be created
+        """
+        self.get_node(path, create).append(obj)
+
+    def search(self, name, itype=ItemType.BOTH, path=''):
+        """ Search property/node in all sub-nodes
+        :param name: Property or Node name
+        :param itype:
+        :param path: Path to root node
+        :return: List of founded properties
+        """
+        assert isinstance(name, str), "Property name must be a string type !"
+
+        node = self.get_node(path)
+        nodes = []
+        items = []
+        while True:
+            nodes += node.nodes
+            if itype == ItemType.NODE or itype == ItemType.BOTH:
+                if node.name == name:
+                    items.append(node)
+            if itype == ItemType.PROP or itype == ItemType.BOTH:
+                for p in node.props:
+                    if p.name == name:
+                        items.append(p)
+            if not nodes: break
+            node = nodes.pop()
+
+        return items
+
+    def walk(self, path='', relative=False):
+        """ Walk trough nodes and return relative/absolute path with list of sub-nodes and properties
+        :param path: The path to root node
+        :param relative: True for relative or False for absolute return path
+        :return: List with 3 items
+        """
+        node = self.get_node(path)
+        nodes = []
+        while True:
+            nodes += node.nodes
+            current_path = "{}/{}".format(node.path, node.name).replace('///', '/').replace('//', '/')
+            if path and relative:
+                current_path = current_path.replace(path, '').lstrip('/')
+            yield (current_path, node.nodes, node.props)
+            if not nodes: break
+            node = nodes.pop()
+
+    def merge(self, fdt_obj):
+        """ Merge external FDT object into this object.
+        :param fdt_obj: The FDT object which will be merged into this
+        """
+        assert isinstance(fdt_obj, FDT), "Invalid object type"
         if self.header.version is None:
-            self.header = fdt.header
+            self.header = fdt_obj.header
         else:
-            if fdt.header.version is not None and \
-               fdt.header.version > self.header.version:
-                self.header.version = fdt.header.version
-        if fdt.entries:
-            for in_entry in fdt.entries:
+            if fdt_obj.header.version is not None and \
+               fdt_obj.header.version > self.header.version:
+                self.header.version = fdt_obj.header.version
+        if fdt_obj.entries:
+            for in_entry in fdt_obj.entries:
                 exist = False
                 for index in range(len(self.entries)):
                     if self.entries[index]['address'] == in_entry['address']:
@@ -87,10 +187,15 @@ class FDT(object):
                         break
                 if not exist:
                     self.entries.append(in_entry)
-        self.rootnode.merge(fdt.rootnode)
+
+        self.root_node.merge(fdt_obj.get_node('/'))
 
     def to_dts(self, tabsize=4):
-        """Store FDT Object into string format (DTS)"""
+        """ Store FDT Object into string format (DTS)
+
+        :param tabsize:
+        :return:
+        """
         result = "/dts-v1/;\n"
         result += "// version: {}\n".format(self.header.version)
         result += "// last_comp_version: {}\n".format(self.header.last_comp_version)
@@ -103,13 +208,19 @@ class FDT(object):
                 result += "{:#x} ".format(entry['address']) if entry['address'] else "0 "
                 result += "{:#x}".format(entry['size']) if entry['size'] else "0"
                 result += ";\n"
-        if self.rootnode is not None:
-            result += self.rootnode.to_dts(tabsize)
+        if self.root_node is not None:
+            result += self.root_node.to_dts(tabsize)
         return result
 
     def to_dtb(self, version=None, last_comp_version=None, boot_cpuid_phys=None):
-        """Export FDT Object into Binary Blob format (DTB)"""
-        if self.rootnode is None:
+        """ Export FDT Object into Binary Blob format (DTB)
+
+        :param version:
+        :param last_comp_version:
+        :param boot_cpuid_phys:
+        :return:
+        """
+        if self.root_node is None:
             return None
 
         from struct import pack
@@ -129,7 +240,7 @@ class FDT(object):
                 blob_entries += pack('>QQ', entry['address'], entry['size'])
         blob_entries += pack('>QQ', 0, 0)
         blob_data_start = self.header.size + len(blob_entries)
-        (blob_data, blob_strings, data_pos) = self.rootnode.to_dtb('', blob_data_start, self.header.version)
+        (blob_data, blob_strings, data_pos) = self.root_node.to_dtb('', blob_data_start, self.header.version)
         blob_data += pack('>I', DTB_END)
         self.header.size_dt_strings = len(blob_strings)
         self.header.size_dt_struct = len(blob_data)
@@ -142,7 +253,9 @@ class FDT(object):
 
 
 def parse_dts(text, root_dir=''):
-    """Parse DTS text file and create FDT Object"""
+    """ Parse DTS text file and create FDT Object
+
+    """
     ver = get_version_info(text)
     text = strip_comments(text)
     dts_lines = split_to_lines(text)
@@ -166,17 +279,16 @@ def parse_dts(text, root_dir=''):
             fdt_obj.entries.append({'address': int(line[1], 0), 'size': int(line[2], 0)})
     # parse nodes
     curnode = None
-    fdt_obj.rootnode = None
+    fdt_obj.root_node = None
     for line in dts_lines:
         if line.endswith('{'):
             # start node
             node_name = line.split()[0]
             new_node = Node(node_name)
-            if fdt_obj.rootnode is None:
-                fdt_obj.rootnode = new_node
+            if fdt_obj.root_node is None:
+                fdt_obj.root_node = new_node
             if curnode is not None:
                 curnode.append(new_node)
-                new_node.parent = curnode
             curnode = new_node
         elif line.endswith('}'):
             # end node
@@ -252,6 +364,7 @@ def parse_dtb(data):
         fdt_obj.entries.append(entrie)
     # parse nodes
     curnode = None
+    fdt_obj.root_node = None
     offset = fdt_obj.header.off_dt_struct
     while True:
         if len(data) < (offset + 4):
@@ -264,11 +377,10 @@ def parse_dtb(data):
             offset = ((offset + len(node_name) + 4) & ~3)
             if not node_name: node_name = '/'
             new_node = Node(node_name)
-            if fdt_obj.rootnode is None:
-                fdt_obj.rootnode = new_node
+            if fdt_obj.root_node is None:
+                fdt_obj.root_node = new_node
             if curnode is not None:
                 curnode.append(new_node)
-                new_node.parent = curnode
             curnode = new_node
         elif tag == DTB_END_NODE:
             if curnode is not None:
@@ -283,7 +395,7 @@ def parse_dtb(data):
             offset = prop_start + prop_size
             offset = ((offset + 3) & ~0x3)
             if curnode is not None:
-                curnode.append(Property.create(prop_name, prop_raw_value))
+                curnode.append(new_property(prop_name, prop_raw_value))
         elif tag == DTB_END:
             break
         else:
@@ -301,12 +413,9 @@ def diff(fdt1, fdt2):
     assert isinstance(fdt1, FDT), "Invalid argument type"
     assert isinstance(fdt2, FDT), "Invalid argument type"
 
-    fdt_same = FDT()
-    fdt_same.header = fdt1.header if fdt1.header.version > fdt2.header.version else fdt2.header
-    fdt_a = FDT()
-    fdt_a.header = fdt1.header
-    fdt_b = FDT()
-    fdt_b.header = fdt2.header
+    fdt_same = FDT(fdt1.header if fdt1.header.version > fdt2.header.version else fdt2.header)
+    fdt_a = FDT(fdt1.header)
+    fdt_b = FDT(fdt2.header)
 
     if fdt1.entries and fdt2.entries:
         for entry_a in fdt1.entries:
@@ -333,6 +442,36 @@ def diff(fdt1, fdt2):
         if not found:
             fdt_b.entries.append(entry_b)
 
-    fdt_same.rootnode, fdt_a.rootnode, fdt_b.rootnode = Node.diff(fdt1.rootnode, fdt2.rootnode)
+    for path, nodes, props in fdt1.walk():
+        try:
+            rnode = fdt2.get_node(path)
+        except:
+            rnode = None
+
+        for node_b in nodes:
+            if rnode is None or rnode.get_subnode(node_b.name) is None:
+                fdt_a.add_item(Node(node_b.name), path)
+            else:
+                fdt_same.add_item(Node(node_b.name), path)
+
+        for prop_a in props:
+            if prop_a == rnode.get_property(prop_a.name):
+                fdt_same.add_item(prop_a.copy(), path)
+            else:
+                fdt_a.add_item(prop_a.copy(), path)
+
+    for path, nodes, props in fdt2.walk():
+        try:
+            rnode = fdt_same.get_node(path)
+        except:
+            rnode = None
+
+        for node_b in nodes:
+            if rnode is None or rnode.get_subnode(node_b.name) is None:
+                fdt_b.add_item(Node(node_b.name), path)
+
+        for prop_b in props:
+            if prop_b != rnode.get_property(prop_b.name):
+                fdt_b.add_item(prop_b.copy(), path)
 
     return fdt_same, fdt_a, fdt_b

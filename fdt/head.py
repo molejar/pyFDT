@@ -14,13 +14,21 @@
 
 from struct import unpack_from, pack
 
-# DTB constants
+
+########################################################################################################################
+# Binary Blob Constants
+########################################################################################################################
+
 DTB_BEGIN_NODE = 0x1
 DTB_END_NODE = 0x2
 DTB_PROP = 0x3
 DTB_NOP = 0x4
 DTB_END = 0x9
 
+
+########################################################################################################################
+# Header Class
+########################################################################################################################
 
 class Header(object):
 
@@ -74,7 +82,7 @@ class Header(object):
         self.off_dt_strings = 0
         self.off_mem_rsvmap = 0
         self.last_comp_version = 0
-        # optional variables
+        # version depend variables
         self.boot_cpuid_phys = 0
         self.size_dt_strings = None
         self.size_dt_struct = None

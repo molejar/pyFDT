@@ -44,7 +44,7 @@ def cli():
 @click.option('-o', '--outfile', type=click.Path(), default=None, help="Output path/file name (*.dts)")
 def todts(outfile, infiles, tabsize):
     """ Convert device tree binary blob (*.dtb) to readable text file (*.dts) """
-    dt = None
+    fdt_obj = None
 
     if not infiles:
         click.echo("Usage: pydtc todts [OPTIONS] [INFILES]...")
@@ -55,21 +55,20 @@ def todts(outfile, infiles, tabsize):
         outfile = os.path.splitext(os.path.basename(infiles[0]))[0] + ".dts"
 
     try:
-        if not infiles:
-            raise Exception()
-
-        if not isinstance(infiles, (list, tuple)):
-            infiles = [infiles]
         for file in infiles:
-            with open(file, 'r') as f:
-                data = fdt.parse_dts(f.read(), os.path.dirname(file))
-            if dt is None:
-                dt = data
+            with open(file, 'rb') as f:
+                try:
+                    obj = fdt.parse_dtb(f.read())
+                except:
+                    raise Exception('Not supported file format: {}'.format(file))
+
+            if fdt_obj is None:
+                fdt_obj = obj
             else:
-                dt.merge(data)
+                fdt_obj.merge(obj)
 
         with open(outfile, 'w') as f:
-            f.write(dt.to_dts(tabsize))
+            f.write(fdt_obj.to_dts(tabsize))
 
     except Exception as e:
         click.echo(" ERROR: {}".format(str(e) if str(e) else "Unknown!"))
@@ -89,7 +88,7 @@ def todts(outfile, infiles, tabsize):
 @click.option('-o', '--outfile', type=click.Path(), default=None, help="Output path/file name (*.dtb)")
 def todtb(outfile, infiles, version, lcversion, cpuid, align, padding, size):
     """ Convert device tree in readable text file (*.dts) to binary blob (*.dtb) """
-    dt = None
+    fdt_obj = None
 
     if not infiles:
         click.echo("Usage: pydtc todtb [OPTIONS] [INFILES]...")
@@ -103,17 +102,19 @@ def todtb(outfile, infiles, version, lcversion, cpuid, align, padding, size):
         if version is not None and version > fdt.Header.MAX_VERSION:
             raise Exception("DTB Version must be lover or equal {} !".format(fdt.Header.MAX_VERSION))
 
-        if not isinstance(infiles, (list, tuple)):
-            infiles = [infiles]
         for file in infiles:
             with open(file, 'r') as f:
-                data = fdt.parse_dts(f.read(), os.path.dirname(file))
-            if dt is None:
-                dt = data
-            else:
-                dt.merge(data)
+                try:
+                    obj = fdt.parse_dts(f.read(), os.path.dirname(file))
+                except:
+                    raise Exception('Not supported file format: {}'.format(file))
 
-        raw_data = dt.to_dtb(version, lcversion, cpuid)
+            if fdt_obj is None:
+                fdt_obj = obj
+            else:
+                fdt_obj.merge(obj)
+
+        raw_data = fdt_obj.to_dtb(version, lcversion, cpuid)
 
         if align is not None:
             if size is not None:
