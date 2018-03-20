@@ -1,7 +1,12 @@
 language: python
 python:
   - "3.6"
+before_install:
+  - pip install --user pytest
+  - pip install --user codecov
 install:
   - pip install .
 script:
-  - python test/test01.py
+  - py.test test/test01.py
+after_success:
+  - codecov --file coverage/lcov.info --disable search
