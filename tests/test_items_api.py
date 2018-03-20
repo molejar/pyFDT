@@ -187,9 +187,9 @@ class NodeTestCase(unittest.TestCase):
         self.assertEqual(self.node_a.name, '/')
         self.assertEqual(len(self.node_a.props), 4)
         self.assertEqual(len(self.node_a.nodes), 1)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AssertionError):
             self.node_a.append('test')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(Exception):
             self.node_a.append(256)
         with self.assertRaises(Exception):
             self.node_a.append(fdt.Property('prop'))

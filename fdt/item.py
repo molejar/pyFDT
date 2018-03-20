@@ -284,9 +284,6 @@ class PropWords(Property):
                 return False
         return True
 
-    def __copy__(self):
-        return PropWords(self.name, *self.data, wsize=self.word_size)
-
     def copy(self):
         return PropWords(self.name, *self.data, wsize=self.word_size)
 
@@ -350,7 +347,7 @@ class PropBytes(Property):
         return len(self.data)
 
     def __eq__(self, prop):
-        """Check properties are the same (same values)"""
+        """ Check properties are the same (same values) """
         if not isinstance(prop, PropBytes):
             return False
         if self.name != prop.name:
@@ -361,9 +358,6 @@ class PropBytes(Property):
             if self.data[index] != prop[index]:
                 return False
         return True
-
-    def __copy__(self):
-        return PropBytes(self.name, self.data)
 
     def copy(self):
         return PropBytes(self.name, self.data)
@@ -466,8 +460,8 @@ class Node(BaseItem):
         return node
 
     def get_property(self, name):
-        """ Get property obj by path/name
-        :param name: The property name
+        """ Get property obj by name
+        :param name: Property name
         :return property object
         """
         for p in self.props:
@@ -476,8 +470,8 @@ class Node(BaseItem):
         return None
 
     def get_subnode(self, name):
-        """ Get sub-node obj by path/name
-        :param name: The sub-node name
+        """ Get sub-node obj by name
+        :param name: Sub-node name
         :return node object
         """
         for n in self.nodes:
@@ -486,43 +480,40 @@ class Node(BaseItem):
         return None
 
     def remove_property(self, name):
-        """ Remove property obj by path/name. Raises ValueError if path/name not exist
-        :param name: The property name
-        :param path: The path to sub-node
+        """ Remove property obj by its name.
+        :param name: Property name
         """
         item = self.get_property(name)
         if item is not None:
             self.props.remove(item)
 
     def remove_subnode(self, name):
-        """ Remove subnode obj by path/name. Raises ValueError if path/name not exist
-        :param path: The path to sub-node
+        """ Remove subnode obj by its name.
+        :param name: Sub-node name
         """
         item = self.get_subnode(name)
         if item is not None:
             self.nodes.remove(item)
 
     def append(self, item):
-        """ Append sub-node or property at specified path
+        """ Append sub-node or property
         :param item: The node or property object
-        :param path: The path to sub-node
         """
+        assert isinstance(item, (Node, Property)), "Invalid object type, use \"Node\" or \"Property\""
+
         if isinstance(item, Property):
             if self.get_property(item.name) is not None:
                 raise Exception("{}: \"{}\" property already exists".format(self, item.name))
             item.set_parent(self)
             self.props.append(item)
 
-        elif isinstance(item, Node):
+        else:
             if self.get_subnode(item.name) is not None:
                 raise Exception("{}: \"{}\" node already exists".format(self, item.name))
             if item is self:
                 raise Exception("{}: append the same node {}".format(self, item.name))
             item.set_parent(self)
             self.nodes.append(item)
-
-        else:
-            raise TypeError("Invalid object type")
 
     def merge(self, node_obj, replace=True):
         """ Merge two nodes and subnodes.

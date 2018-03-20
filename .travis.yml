@@ -4,10 +4,10 @@ python:
 before_install:
   - pip install pytest
   - pip install pytest-cov
-  - pip install codecov
+  - pip install coveralls
 install:
   - pip install .
 script:
-  - pytest --cov=./ test/test01.py
+  - py.test --cov=fdt tests/*
 after_success:
-  - codecov
+  - coveralls
