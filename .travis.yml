@@ -6,7 +6,7 @@ before_install:
   - pip install pytest-cov
   - pip install coveralls
 install:
-  - pip install .
+  - pip install -e .
 script:
   - py.test --cov=fdt tests/*
 after_success:
