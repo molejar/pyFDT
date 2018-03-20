@@ -1,7 +1,7 @@
 # Flattened Device Tree Python Module 
 
 [![Build Status](https://travis-ci.org/molejar/pyFDT.svg?branch=master)](https://travis-ci.org/molejar/pyFDT)
-[![Coverage Status](https://coveralls.io/repos/github/molejar/pyFDT/badge.svg?branch=master)](https://coveralls.io/github/molejar/pyFDT?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/molejar/pyFDT/badge.svg)](https://coveralls.io/github/molejar/pyFDT)
 
 This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
 created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/doc/imxsb.md)
@@ -178,7 +178,7 @@ Merge two and more *.dtb or *.dts files into one *.dts file
 
 #### $ pydtc diff [OPTIONS] FILE1 FILE2
 
-Compare two dtb/dts files
+Compare two dtb/dts files and generate 3 dts files (same in 1 and 2, specific for 1, specific for 2)
 
 **FILE1** - Input file 1  <br>
 **FILE2** - Input file 2
