@@ -2,8 +2,8 @@ language: python
 python:
   - "3.6"
 before_install:
-  - pip install --user pytest
-  - pip install --user codecov
+  - pip install pytest
+  - pip install codecov
 install:
   - pip install .
 script:
