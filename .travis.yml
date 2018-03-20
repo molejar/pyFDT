@@ -3,10 +3,11 @@ python:
   - "3.6"
 before_install:
   - pip install pytest
+  - pip install pytest-cov
   - pip install codecov
 install:
   - pip install .
 script:
-  - py.test test/test01.py
+  - pytest --cov=./ test/test01.py
 after_success:
-  - codecov --file coverage/lcov.info --disable search
+  - codecov
