@@ -6,7 +6,7 @@
 This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
 created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/doc/imxsb.md)
 
-> Some parts in this module have been inspired from: //github.com/superna9999/pyfdt project.
+> Some parts in this module have been inspired from: https://github.com/superna9999/pyfdt project.
 
 
 Dependencies

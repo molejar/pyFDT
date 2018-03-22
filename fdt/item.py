@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import copy
 from struct import unpack, pack
 from string import printable
 
@@ -145,7 +144,7 @@ class Property(BaseItem):
         """Get dts string representation"""
         return line_offset(tabsize, depth, '{};\n'.format(self.name))
 
-    def to_dtb(self, strings, pos=0, version=17):
+    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
         """Get blob representation"""
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
@@ -219,7 +218,7 @@ class PropStrings(Property):
         result += '";\n'
         return result
 
-    def to_dtb(self, strings, pos=0, version=17):
+    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
         """Get DTB representation"""
         blob = pack('')
         for chars in self.data:
@@ -235,7 +234,7 @@ class PropStrings(Property):
             strings += self.name + '\0'
         blob = pack('>III', DTB_PROP, blob_len, strpos) + blob
         pos += len(blob)
-        return (blob, strings, pos)
+        return blob, strings, pos
 
 
 class PropWords(Property):
@@ -308,7 +307,7 @@ class PropWords(Property):
         result += ">;\n"
         return result
 
-    def to_dtb(self, strings, pos=0, version=17):
+    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
         """Get DTB representation"""
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
@@ -318,7 +317,7 @@ class PropWords(Property):
         for word in self.data:
             blob += pack('>I', word)
         pos  += len(blob)
-        return (blob, strings, pos)
+        return blob, strings, pos
 
 
 class PropBytes(Property):
@@ -382,8 +381,13 @@ class PropBytes(Property):
         result += '];\n'
         return result
 
-    def to_dtb(self, strings, pos=0, version=17):
-        """Get DTB representation"""
+    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
+        """ Get DTB representation
+        :param strings:
+        :param pos:
+        :param version:
+        :return
+        """
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
             strpos = len(strings)
@@ -393,7 +397,7 @@ class PropBytes(Property):
         if len(blob) % 4:
             blob += bytes([0] * (4 - (len(blob) % 4)))
         pos += len(blob)
-        return (blob, strings, pos)
+        return blob, strings, pos
 
 
 ########################################################################################################################
@@ -516,8 +520,9 @@ class Node(BaseItem):
             self.nodes.append(item)
 
     def merge(self, node_obj, replace=True):
-        """ Merge two nodes and subnodes.
-            Replace current properties with the given properties if replace is True.
+        """ Merge two nodes and sub-nodes.
+        :param node_obj: Node object
+        :param replace: If True, replace current properties with the given properties
         """
         assert isinstance(node_obj, Node), "Invalid object type"
 
@@ -540,7 +545,9 @@ class Node(BaseItem):
             elif prop in self._props:
                 continue
             elif replace:
-                self._props[index].data = copy(prop.data)
+                new_prop = prop.copy()
+                new_prop.set_parent(self)
+                self._props[index] = new_prop
             else:
                 pass
 
@@ -554,15 +561,24 @@ class Node(BaseItem):
                 self._nodes[index].merge(sub_node, replace)
 
     def to_dts(self, tabsize=4, depth=0):
-        """Get NODE in string representation"""
+        """ Get NODE in string representation
+        :param tabsize:
+        :param depth:
+        :return string
+        """
         dts  = line_offset(tabsize, depth, self.name + ' {\n')
         dts += ''.join([prop.to_dts(tabsize, depth + 1) for prop in self._props])
         dts += ''.join([node.to_dts(tabsize, depth + 1) for node in self._nodes])
         dts += line_offset(tabsize, depth, "};\n")
         return dts
 
-    def to_dtb(self, strings, pos=0, version=17):
-        """Get NODE in binary blob representation"""
+    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
+        """ Get NODE in binary blob representation
+        :param strings:
+        :param pos:
+        :param version:
+        :return
+        """
         if self.name == '/':
             blob = pack('>II', DTB_BEGIN_NODE, 0)
         else:
