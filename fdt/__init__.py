@@ -197,10 +197,11 @@ class FDT(object):
         :return:
         """
         result = "/dts-v1/;\n"
-        result += "// version: {}\n".format(self.header.version)
-        result += "// last_comp_version: {}\n".format(self.header.last_comp_version)
-        if self.header.version >= 2:
-            result += "// boot_cpuid_phys: 0x{:X}\n".format(self.header.boot_cpuid_phys)
+        if self.header.version is not None:
+            result += "// version: {}\n".format(self.header.version)
+            result += "// last_comp_version: {}\n".format(self.header.last_comp_version)
+            if self.header.version >= 2:
+                result += "// boot_cpuid_phys: 0x{:X}\n".format(self.header.boot_cpuid_phys)
         result += '\n'
         if self.entries:
             for entry in self.entries:
@@ -307,7 +308,14 @@ def parse_dts(text, root_dir=''):
                     prop_obj = PropWords(prop_name)
                     prop_value = prop_value.replace('<', '').replace('>', '')
                     for prop in prop_value.split():
-                        prop_obj.append(int(prop, 0))
+                        if prop.startswith('0x'):
+                            prop_obj.append(int(prop, 16))
+                        elif prop.startswith('0b'):
+                            prop_obj.append(int(prop, 2))
+                        elif prop.startswith('0'):
+                            prop_obj.append(int(prop, 8))
+                        else:
+                            prop_obj.append(int(prop))
                 elif prop_value.startswith('['):
                     prop_obj = PropBytes(prop_name)
                     prop_value = prop_value.replace('[', '').replace(']', '')
@@ -413,9 +421,13 @@ def diff(fdt1, fdt2):
     assert isinstance(fdt1, FDT), "Invalid argument type"
     assert isinstance(fdt2, FDT), "Invalid argument type"
 
-    fdt_same = FDT(fdt1.header if fdt1.header.version > fdt2.header.version else fdt2.header)
     fdt_a = FDT(fdt1.header)
     fdt_b = FDT(fdt2.header)
+
+    if fdt1.header.version is not None and fdt2.header.version is not None:
+        fdt_same = FDT(fdt1.header if fdt1.header.version > fdt2.header.version else fdt2.header)
+    else:
+        fdt_same = FDT(fdt1.header)
 
     if fdt1.entries and fdt2.entries:
         for entry_a in fdt1.entries:
@@ -455,7 +467,7 @@ def diff(fdt1, fdt2):
                 fdt_same.add_item(Node(node_b.name), path)
 
         for prop_a in props:
-            if prop_a == rnode.get_property(prop_a.name):
+            if rnode is not None and prop_a == rnode.get_property(prop_a.name):
                 fdt_same.add_item(prop_a.copy(), path)
             else:
                 fdt_a.add_item(prop_a.copy(), path)
@@ -471,7 +483,7 @@ def diff(fdt1, fdt2):
                 fdt_b.add_item(Node(node_b.name), path)
 
         for prop_b in props:
-            if prop_b != rnode.get_property(prop_b.name):
+            if rnode is None or prop_b != rnode.get_property(prop_b.name):
                 fdt_b.add_item(prop_b.copy(), path)
 
     return fdt_same, fdt_a, fdt_b

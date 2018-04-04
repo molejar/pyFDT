@@ -70,6 +70,16 @@ The API of **fdt** module is intuitive and implementing all general requirements
         f.write(dt2.to_dtb(version=17))
         
     #-----------------------------------------------
+    # Add Property and Node into dt2
+    # ----------------------------------------------
+    node = fdt.Node('test_node')
+    node.append(fdt.Property('basic_property'))
+    node.append(fdt.PropStrings('string_property', 'value1', 'value2'))
+    node.append(fdt.PropWords('words_property', 0x1000, 0x80000000, wsize=32))
+    node.append(fdt.PropBytes('bytes_property', data=[0, 200, 12]))
+    dt2.add_item(node)
+    
+    #-----------------------------------------------
     # merge dt2 into dt1
     # ----------------------------------------------
     dt1.merge(dt2)
@@ -115,7 +125,7 @@ Commands:
 
 #### $ pydtc todts [OPTIONS] INFILE
 
-Convert Device Tree in binary blob (*.dtb) to readable text file (*.dts)
+Convert Device Tree in binary blob *.dtb to readable text file *.dts
 
 **INFILE** - Single DTB file as *.dtb
 
@@ -134,7 +144,7 @@ Convert Device Tree in binary blob (*.dtb) to readable text file (*.dts)
 
 #### $ pydtc todtb [OPTIONS] INFILE
 
-Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
+Convert Device Tree in readable text file *.dts to binary blob *.dtb
 
 **INFILE** - Single DTS file as *.dts
 
@@ -160,8 +170,8 @@ Convert Device Tree in readable text file (*.dts) to binary blob (*.dtb)
 
 Merge two and more *.dtb or *.dts files into one *.dts file
 
-**OUTFILE** - The output file name (*.dts)  <br>
-**INFILES** - Two or more input files with (*.dtb or *.dts) extension
+**OUTFILE** - The output file name with *.dts extension <br>
+**INFILES** - Two or more input files with *.dtb or *.dts extension
 
 ##### options:
 * **-t, --tabsize** - Tabulator Size
@@ -171,16 +181,16 @@ Merge two and more *.dtb or *.dts files into one *.dts file
 ##### Example:
 
 ``` bash
-  $ pydtc merge out.dtb test1.dtb test2.dtb
+  $ pydtc merge out.dts test1.dtb test2.dtb
     
-    Merge output saved as: out.dtb
+    Merge output saved as: out.dts
 ```
 
 #### $ pydtc diff [OPTIONS] FILE1 FILE2
 
 Compare two dtb/dts files and generate 3 dts files (same in 1 and 2, specific for 1, specific for 2)
 
-**FILE1** - Input file 1  <br>
+**FILE1** - Input file 1 <br>
 **FILE2** - Input file 2
 
 ##### options:

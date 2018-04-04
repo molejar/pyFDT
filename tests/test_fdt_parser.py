@@ -37,6 +37,6 @@ def test_04():
     with open(DIRECTORY + "base.dts") as f:
         data = f.read()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         fdt_obj = fdt.parse_dts(data)
 

@@ -1,5 +1,7 @@
 # directories
 .idea
+.pytest*
+.coverage
 *.egg-info
 __pycache__
 build
@@ -8,5 +10,5 @@ temp
 
 # files
 *.pyc
-*.dtb
-*.dts
+#*.dtb
+#*.dts

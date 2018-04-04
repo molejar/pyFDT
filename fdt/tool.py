@@ -137,7 +137,7 @@ def merge(outfile, infiles, tabsize, intype):
             elif file_path.endswith(".dts"):
                 file_type = 'dts'
             else:
-                pass
+                raise Exception('Not supported file extension: {}'.format(file_path))
         try:
             if file_type == 'dtb':
                 with open(file_path, 'rb') as f:
@@ -145,8 +145,8 @@ def merge(outfile, infiles, tabsize, intype):
             else:
                 with open(file_path, 'r') as f:
                     obj = fdt.parse_dts(f.read(), os.path.dirname(file_path))
-        except:
-            raise Exception('Not supported file format: {}'.format(file_path))
+        except Exception as e:
+            raise Exception('Not supported file format: {} {}'.format(file_path, str(e)))
 
         return obj
 
@@ -195,7 +195,7 @@ def diff(file1, file2, intype, outdir):
             elif file_path.endswith(".dts"):
                 file_type = 'dts'
             else:
-                pass
+                raise Exception('Not supported file extension: {}'.format(file_path))
         try:
             if file_type == 'dtb':
                 with open(file_path, 'rb') as f:
