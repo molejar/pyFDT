@@ -20,7 +20,7 @@ from .misc import strip_comments, split_to_lines, get_version_info, extract_stri
 
 __author__  = "Martin Olejar"
 __contact__ = "martin.olejar@gmail.com"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "Apache 2.0"
 __status__  = "Development"
 __all__     = [

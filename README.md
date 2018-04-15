@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/molejar/pyFDT.svg?branch=master)](https://travis-ci.org/molejar/pyFDT)
 [![Coverage Status](https://coveralls.io/repos/github/molejar/pyFDT/badge.svg)](https://coveralls.io/github/molejar/pyFDT)
+[![PyPI Status](https://img.shields.io/pypi/v/fdt.svg)](https://pypi.python.org/pypi/fdt)
+[![Python Version](https://img.shields.io/pypi/pyversions/fdt.svg)](https://www.python.org)
 
 This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
 created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/doc/imxsb.md)
@@ -18,10 +20,14 @@ Dependencies
 Installation
 ------------
 
+``` bash
+    $ pip install fdt
+```
+
 To install the latest version from master branch execute in shell following command:
 
 ``` bash
-    $ pip3 install -U https://github.com/molejar/pyFDT/archive/master.zip
+    $ pip install -U https://github.com/molejar/pyFDT/archive/master.zip
 ```
 
 In case of development, install it from cloned sources:
@@ -29,7 +35,7 @@ In case of development, install it from cloned sources:
 ``` bash
     $ git clone https://github.com/molejar/pyFDT.git
     $ cd pyFDT
-    $ pip3 install -U -e .
+    $ pip install -U -e .
 ```
 
 **NOTE:** You may run into a permissions issues running these commands. Here are a few options how to fix it:

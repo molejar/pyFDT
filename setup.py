@@ -14,14 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+from os import path
+from codecs import open
 from setuptools import setup
 from fdt import __version__, __license__, __author__, __contact__
 
-# Check python version
-import sys
-if sys.version_info[0] == 2:
-    sys.exit('Sorry, Python 2.x is not supported !')
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='fdt',
@@ -30,13 +32,16 @@ setup(
     license=__license__,
     author_email=__contact__,
     url='https://github.com/molejar/pyFDT',
-    platforms="Mac OSX, Windows, Linux",
-    description='Open Source library for manipulation with Device Tree Blob',
+    description='Flattened Device Tree Python Module',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    python_requires='>=3',
     install_requires=['click>=5.0'],
     packages=['fdt'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
+        'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering',
         'Topic :: Software Development :: Embedded Systems',
