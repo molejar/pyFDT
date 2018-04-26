@@ -15,15 +15,13 @@
 # limitations under the License.
 
 from os import path
-from codecs import open
 from setuptools import setup
 from fdt import __version__, __license__, __author__, __contact__
 
-here = path.abspath(path.dirname(__file__))
 
-# Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+def read_file(name):
+    return open(path.join(path.dirname(__file__), name)).read()
+
 
 setup(
     name='fdt',
@@ -33,7 +31,7 @@ setup(
     author_email=__contact__,
     url='https://github.com/molejar/pyFDT',
     description='Flattened Device Tree Python Module',
-    long_description=long_description,
+    long_description=read_file('README.md'),
     long_description_content_type='text/markdown',
     python_requires='>=3',
     install_requires=['click>=5.0'],

@@ -101,6 +101,25 @@ class FDT(object):
         """
         return self.get_node(path).get_property(name)
 
+    def exist_node(self, path):
+        """ Check if <path>/node exist
+        :param path: path/node name
+        :return True if <path>/node exist else False
+        """
+        try:
+            self.get_node(path)
+        except:
+            return False
+        else:
+            return True
+
+    def exist_property(self, name, path=''):
+        """ Check if property exist
+        :param name: Property name
+        :return True if property exist else False
+        """
+        return self.get_node(path).exist_property(name) if self.exist_node(path) else False
+
     def remove_node(self, name, path=''):
         """ Remove node obj by path/name. Raises ValueError if path/name doesn't exist
         :param name: Node name

@@ -483,6 +483,20 @@ class Node(BaseItem):
                 return n
         return None
 
+    def exist_property(self, name):
+        """ Check if property exist
+        :param name: Property name
+        :return True if property exist else False
+        """
+        return False if self.get_property(name) is None else True
+
+    def exist_subnode(self, name):
+        """ Check if sub-node exist
+        :param name: Sub-node name
+        :return True if sub-node exist else False
+        """
+        return False if self.get_subnode(name) is None else True
+
     def remove_property(self, name):
         """ Remove property obj by its name.
         :param name: Property name
@@ -492,7 +506,7 @@ class Node(BaseItem):
             self.props.remove(item)
 
     def remove_subnode(self, name):
-        """ Remove subnode obj by its name.
+        """ Remove sub-node obj by its name.
         :param name: Sub-node name
         """
         item = self.get_subnode(name)
