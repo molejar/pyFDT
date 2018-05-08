@@ -15,12 +15,12 @@
 import os
 
 from .head import Header, DTB_BEGIN_NODE, DTB_END_NODE, DTB_PROP, DTB_END, DTB_NOP
-from .item import new_property, Property, PropBytes, PropWords, PropStrings, Node
+from .item import new_property, Property, PropBytes, PropWords, PropStrings, PropIncBin, Node
 from .misc import strip_comments, split_to_lines, get_version_info, extract_string
 
 __author__  = "Martin Olejar"
 __contact__ = "martin.olejar@gmail.com"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __license__ = "Apache 2.0"
 __status__  = "Development"
 __all__     = [
@@ -33,6 +33,7 @@ __all__     = [
     'PropBytes',
     'PropWords',
     'PropStrings',
+    'PropIncBin',
     # core methods
     'parse_dts',
     'parse_dtb',
@@ -59,7 +60,7 @@ class FDT(object):
         self.root_node = Node('/')
 
     def __str__(self):
-        """String representation"""
+        """ String representation """
         return self.info()
 
     def info(self):
@@ -135,7 +136,7 @@ class FDT(object):
         self.get_node(path).remove_property(name)
 
     def add_item(self, obj, path='', create=True):
-        """ add sub-node or property at specified path. Raises ValueError if path doesn't exist
+        """ Add sub-node or property at specified path. Raises ValueError if path doesn't exist
         :param obj: The node or property object
         :param path: The path to sub-node
         :param create: If True, not existing nodes will be created
@@ -350,8 +351,8 @@ def parse_dts(text, root_dir=''):
                         raise Exception("File path doesn't exist: {}".format(file_path))
                     with open(file_path, "rb") as f:
                         f.seek(file_offset)
-                        data = f.read(file_size) if file_size > 0 else f.read()
-                    prop_obj = PropBytes(prop_name, data)
+                        prop_data = f.read(file_size) if file_size > 0 else f.read()
+                    prop_obj = PropIncBin(prop_name, prop_data, os.path.split(file_path)[1])
                 elif prop_value.startswith('/plugin/'):
                     raise NotImplementedError("Not implemented property value: /plugin/")
                 elif prop_value.startswith('/bits/'):
@@ -368,9 +369,10 @@ def parse_dts(text, root_dir=''):
     return fdt_obj
 
 
-def parse_dtb(data):
+def parse_dtb(data, offset=0):
     """ Parse FDT Binary Blob and create FDT Object
     :param data: FDT Binary Blob as bytes or bytearray
+    :param offset:
     :return FDT object
     """
     assert isinstance(data, (bytes, bytearray)), "Invalid argument type"
@@ -381,48 +383,46 @@ def parse_dtb(data):
     # parse header
     fdt_obj.header = Header.parse(data)
     # parse entries
-    offset = fdt_obj.header.off_mem_rsvmap
-    aa = data[offset:]
+    index = fdt_obj.header.off_mem_rsvmap
     while True:
-        entrie = dict(zip(('address', 'size'), unpack_from(">QQ", data, offset)))
-        offset += 16
+        entrie = dict(zip(('address', 'size'), unpack_from(">QQ", data, offset + index)))
+        index += 16
         if entrie['address'] == 0 and entrie['size'] == 0:
             break
         fdt_obj.entries.append(entrie)
     # parse nodes
-    curnode = None
+    current_node = None
     fdt_obj.root_node = None
-    offset = fdt_obj.header.off_dt_struct
+    index = fdt_obj.header.off_dt_struct
     while True:
-        if len(data) < (offset + 4):
-            raise Exception("Error ...")
-
-        tag = unpack_from(">I", data, offset)[0]
-        offset += 4
+        if len(data) < (offset + index + 4):
+            raise Exception("Index out of range !")
+        tag = unpack_from(">I", data, offset + index)[0]
+        index += 4
         if tag == DTB_BEGIN_NODE:
-            node_name = extract_string(data, offset)
-            offset = ((offset + len(node_name) + 4) & ~3)
+            node_name = extract_string(data, offset + index)
+            index = ((index + len(node_name) + 4) & ~3)
             if not node_name: node_name = '/'
             new_node = Node(node_name)
             if fdt_obj.root_node is None:
                 fdt_obj.root_node = new_node
-            if curnode is not None:
-                curnode.append(new_node)
-            curnode = new_node
+            if current_node is not None:
+                current_node.append(new_node)
+            current_node = new_node
         elif tag == DTB_END_NODE:
-            if curnode is not None:
-                curnode = curnode.parent
+            if current_node is not None:
+                current_node = current_node.parent
         elif tag == DTB_PROP:
-            prop_size, prop_string_pos, = unpack_from(">II", data, offset)
-            prop_start = offset + 8
+            prop_size, prop_string_pos, = unpack_from(">II", data, offset + index)
+            prop_start = index + 8
             if fdt_obj.header.version < 16 and prop_size >= 8:
                 prop_start = ((prop_start + 7) & ~0x7)
             prop_name = extract_string(data, fdt_obj.header.off_dt_strings + prop_string_pos)
-            prop_raw_value = data[prop_start: prop_start + prop_size]
-            offset = prop_start + prop_size
-            offset = ((offset + 3) & ~0x3)
-            if curnode is not None:
-                curnode.append(new_property(prop_name, prop_raw_value))
+            prop_raw_value = data[offset + prop_start : offset + prop_start + prop_size]
+            index = prop_start + prop_size
+            index = ((index + 3) & ~0x3)
+            if current_node is not None:
+                current_node.append(new_property(prop_name, prop_raw_value))
         elif tag == DTB_END:
             break
         else:

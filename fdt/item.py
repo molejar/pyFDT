@@ -359,6 +359,7 @@ class PropBytes(Property):
         return True
 
     def copy(self):
+        """ Create a copy of object """
         return PropBytes(self.name, self.data)
 
     def append(self, value):
@@ -374,7 +375,7 @@ class PropBytes(Property):
         self.data = bytearray()
 
     def to_dts(self, tabsize=4, depth=0):
-        """Get DTS representation"""
+        """ Get DTS representation """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = ['
         result += ' '.join(["{:02X}".format(byte) for byte in self.data])
@@ -398,6 +399,48 @@ class PropBytes(Property):
             blob += bytes([0] * (4 - (len(blob) % 4)))
         pos += len(blob)
         return blob, strings, pos
+
+
+class PropIncBin(PropBytes):
+    """Property with bytes as value"""
+
+    def __init__(self, name, data=None, file_name=None, rpath=None):
+        """ Init property bytes
+        :param name: Property name
+        :param data: Data as list, bytes or bytearray
+        :param parent: Property parent
+        :return Property object
+        """
+        super().__init__(name, data)
+        self.file_name = file_name
+        self.relative_path = rpath
+
+    def __eq__(self, prop):
+        """ Check properties are the same (same values) """
+        if not isinstance(prop, PropIncBin):
+            return False
+        if self.name != prop.name:
+            return False
+        if self.file_name != prop.file_name:
+            return False
+        if self.relative_path != prop.relative_path:
+            return False
+        if self.data != prop.data:
+            return False
+        return True
+
+    def copy(self):
+        """ Create a copy of object """
+        return PropIncBin(self.name, self.data, self.file_name, self.relative_path)
+
+    def to_dts(self, tabsize=4, depth=0):
+        """ Get DTS representation """
+        file_path = self.file_name
+        if self.relative_path is not None:
+            file_path = "{}/{}".format(self.relative_path, self.file_name)
+        result  = line_offset(tabsize, depth, self.name)
+        result += " = /incbin/(\"{}\");\n".format(file_path)
+        return result
 
 
 ########################################################################################################################
