@@ -516,6 +516,13 @@ class Node(BaseItem):
                 return p
         return None
 
+    def set_property(self, name, value):
+        for p in self.props:
+            if p.name == name:
+                p.data = [value]
+                return
+        self.add_property(name, value)
+
     def get_subnode(self, name):
         """ Get sub-node obj by name
         :param name: Sub-node name
@@ -547,6 +554,17 @@ class Node(BaseItem):
         item = self.get_property(name)
         if item is not None:
             self.props.remove(item)
+
+    def add_property(self, name, data):
+        if (type(data) == int):
+            prop = PropWords(name, data)
+        elif (type(data) == list):
+            prop = PropWords(name, *data)
+        elif (type(data) == str):
+            prop = PropStrings(name, data)
+        else:
+            raise Exception('data type not supported')
+        self.append(prop)
 
     def remove_subnode(self, name):
         """ Remove sub-node obj by its name.

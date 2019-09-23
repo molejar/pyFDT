@@ -102,6 +102,14 @@ class FDT(object):
         """
         return self.get_node(path).get_property(name)
 
+    def set_property(self, name, value, path=''):
+        """ Get property obj by name
+        :param name: Property name
+        :param value: Property value
+        :param path: Path to sub-node
+        """
+        self.get_node(path).set_property(name, value)
+
     def exist_node(self, path):
         """ Check if <path>/node exist
         :param path: path/node name
