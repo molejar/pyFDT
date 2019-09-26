@@ -236,6 +236,32 @@ class NodeTestCase(unittest.TestCase):
         out += "};\n"
         self.assertEqual(str_data, out)
 
+    def test_set_property(self):
+        root_node = fdt.Node('/')
+        # add properties into node by set_property method
+        root_node.set_property('prop', None)
+        root_node.set_property('int_prop', 1000)
+        root_node.set_property('list_int_prop', [1, 2])
+        root_node.set_property('str_prop', 'value')
+        root_node.set_property('list_str_prop', ['value1', 'value2'])
+        root_node.set_property('bytes_prop', b'\x00\x55\x66')
+        # validate types and values
+        self.assertEqual(len(root_node.props), 6)
+        self.assertIsInstance(root_node.get_property('prop'), fdt.Property)
+        self.assertIsInstance(root_node.get_property('int_prop'), fdt.PropWords)
+        self.assertEqual(root_node.get_property('int_prop').data, [1000])
+        self.assertIsInstance(root_node.get_property('list_int_prop'), fdt.PropWords)
+        self.assertEqual(root_node.get_property('list_int_prop').data, [1, 2])
+        self.assertIsInstance(root_node.get_property('str_prop'), fdt.PropStrings)
+        self.assertEqual(root_node.get_property('str_prop').data, ['value'])
+        self.assertIsInstance(root_node.get_property('list_str_prop'), fdt.PropStrings)
+        self.assertEqual(root_node.get_property('list_str_prop').data, ['value1', 'value2'])
+        self.assertIsInstance(root_node.get_property('bytes_prop'), fdt.PropBytes)
+        self.assertEqual(root_node.get_property('bytes_prop').data, b'\x00\x55\x66')
+        # update property in node by set_property method
+        root_node.set_property('list_int_prop', [1, 2, 3])
+        # validate property value
+        self.assertEqual(root_node.get_property('list_int_prop').data, [1, 2, 3])
 
 if __name__ == '__main__':
     unittest.main()

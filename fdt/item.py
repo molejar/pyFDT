@@ -516,6 +516,29 @@ class Node(BaseItem):
                 return p
         return None
 
+    def set_property(self, name, value):
+        if value is None:
+            new_prop = Property(name)
+        elif isinstance(value, int):
+            new_prop = PropWords(name, value)
+        elif isinstance(value, str):
+            new_prop = PropStrings(name, value)
+        elif isinstance(value, list) and isinstance(value[0], int):
+            new_prop = PropWords(name, *value)
+        elif isinstance(value, list) and isinstance(value[0], str):
+            new_prop = PropStrings(name, *value)
+        elif isinstance(value, (bytes, bytearray)):
+            new_prop = PropBytes(name, data=value)
+        else:
+            raise TypeError('Value type not supported')
+        new_prop.set_parent(self)
+        old_prop = self.get_property(name)
+        if old_prop is None:
+            self.props.append(new_prop)
+        else:
+            index = self.props.index(old_prop)
+            self.props[index] = new_prop
+
     def get_subnode(self, name):
         """ Get sub-node obj by name
         :param name: Sub-node name
