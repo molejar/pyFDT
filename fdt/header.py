@@ -97,7 +97,7 @@ class Header(object):
         return nfo
 
     @classmethod
-    def parse(cls, data, offset=0):
+    def parse(cls, data: bytes, offset: int = 0):
         data_offset = cls.MIN_SIZE
         if len(data) < (offset + data_offset):
             raise ValueError("Data size too small !")
@@ -132,7 +132,7 @@ class Header(object):
 
         return header
 
-    def export(self):
+    def export(self) -> bytes:
         if self.version is None:
             raise Exception("Header Version must be specified !")
 

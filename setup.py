@@ -43,7 +43,6 @@ setup(
     #long_description_content_type='text/x-rst',
     #long_description_content_type='text/markdown',
     python_requires='>=3.6',
-    install_requires=['click>=5.0'],
     packages=['fdt'],
     classifiers=[
         'Programming Language :: Python :: 3',
@@ -56,7 +55,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'pydtc = fdt.tool:main'
+            'pydtc = fdt.__main__:main'
         ],
     }
 )

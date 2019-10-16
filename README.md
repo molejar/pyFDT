@@ -10,32 +10,28 @@ created for [i.MX Smart-Boot Tool](https://github.com/molejar/pyIMX/blob/master/
 
 > Some parts in this module have been inspired from: https://github.com/superna9999/pyfdt project.
 
-
-Dependencies
-------------
+## Dependencies
 
 - [Python](https://www.python.org) - Python 3.x interpreter
-- [Click](http://click.pocoo.org/6) - Python package for creating beautiful command line interface.
 
-Installation
-------------
+## Installation
 
-``` bash
-    $ pip install fdt
+```bash
+pip install fdt
 ```
 
 To install the latest version from master branch execute in shell following command:
 
-``` bash
-    $ pip install -U https://github.com/molejar/pyFDT/archive/master.zip
+```bash
+pip install -U https://github.com/molejar/pyFDT/archive/master.zip
 ```
 
 In case of development, install it from cloned sources:
 
-``` bash
-    $ git clone https://github.com/molejar/pyFDT.git
-    $ cd pyFDT
-    $ pip install -U -e .
+```bash
+git clone https://github.com/molejar/pyFDT.git
+cd pyFDT
+pip install -U -e .
 ```
 
 **NOTE:** You may run into a permissions issues running these commands. Here are a few options how to fix it:
@@ -44,170 +40,167 @@ In case of development, install it from cloned sources:
 2. Specify the `--user` option to install locally into your home directory (export "~/.local/bin" into PATH variable if haven't).
 3. Run the command in a [virtualenv](https://virtualenv.pypa.io/en/latest/) local to a specific project working set.
 
-
-Usage
------
+## Usage
 
 The API of **fdt** module is intuitive and implementing all general requirements for manipulation with FDT Nodes, Properties and dts/dtb files.
 
 ```python
-    import fdt
-    
-    #-----------------------------------------------
-    # convert *.dtb to *.dts
-    # ----------------------------------------------
-    with open("example.dtb", "rb") as f:
-        dtb_data = f.read()
-        
-    dt1 = fdt.parse_dtb(dtb_data)
-    
-    with open("example.dts", "w") as f:
-        f.write(dt1.to_dts())
-        
-    #-----------------------------------------------
-    # convert *.dts to *.dtb
-    # ----------------------------------------------
-    with open("example.dts", "r") as f:
-        dts_text = f.read()
-        
-    dt2 = fdt.parse_dts(dts_text)
-    
-    with open("example.dtb", "wb") as f:
-        f.write(dt2.to_dtb(version=17))
-        
-    #-----------------------------------------------
-    # Add Property and Node into dt2
-    # ----------------------------------------------
-    node = fdt.Node('test_node')
-    node.append(fdt.Property('basic_property'))
-    node.append(fdt.PropStrings('string_property', 'value1', 'value2'))
-    node.append(fdt.PropWords('words_property', 0x1000, 0x80000000, wsize=32))
-    node.append(fdt.PropBytes('bytes_property', data=[0, 200, 12]))
-    dt2.add_item(node)
-    
-    #-----------------------------------------------
-    # merge dt2 into dt1
-    # ----------------------------------------------
-    dt1.merge(dt2)
+  import fdt
+  
+  #-----------------------------------------------
+  # convert *.dtb to *.dts
+  # ----------------------------------------------
+  with open("example.dtb", "rb") as f:
+      dtb_data = f.read()
 
-    with open("merged.dtb", "wb") as f:
-        f.write(dt1.to_dtb(version=17))
-        
-    #-----------------------------------------------
-    # diff two fdt objects
-    # ----------------------------------------------
-    out = fdt.diff(dt1, dt2)
-    
-    print(out[0]) # same in dt1 and dt2
-    print(out[1]) # specific for dt1
-    print(out[2]) # specific for dt2
+  dt1 = fdt.parse_dtb(dtb_data)
+  
+  with open("example.dts", "w") as f:
+      f.write(dt1.to_dts())
+
+  #-----------------------------------------------
+  # convert *.dts to *.dtb
+  # ----------------------------------------------
+  with open("example.dts", "r") as f:
+      dts_text = f.read()
+
+  dt2 = fdt.parse_dts(dts_text)
+  
+  with open("example.dtb", "wb") as f:
+      f.write(dt2.to_dtb(version=17))
+
+  #-----------------------------------------------
+  # Add Property and Node into dt2
+  # ----------------------------------------------
+  node = fdt.Node('test_node')
+  node.append(fdt.Property('basic_property'))
+  node.append(fdt.PropStrings('string_property', 'value1', 'value2'))
+  node.append(fdt.PropWords('words_property', 0x1000, 0x80000000))
+  node.append(fdt.PropBytes('bytes_property', data=[0, 200, 12]))
+  dt2.add_item(node)
+  
+  #-----------------------------------------------
+  # merge dt2 into dt1
+  # ----------------------------------------------
+  dt1.merge(dt2)
+
+  with open("merged.dtb", "wb") as f:
+      f.write(dt1.to_dtb(version=17))
+
+  #-----------------------------------------------
+  # diff two fdt objects
+  # ----------------------------------------------
+  out = fdt.diff(dt1, dt2)
+  
+  print(out[0]) # same in dt1 and dt2
+  print(out[1]) # specific for dt1
+  print(out[2]) # specific for dt2
 ```
 
-[ pydtc ] Tool
---------------
+## [ pydtc ] Tool
 
 The python device tree converter **pydtc** is a tool for conversion *.dts to *.dtb and vice versa. Is distributed
 together with **fdt** module. This tool can be in some cases used as replacement of [device tree compiler](https://git.kernel.org/pub/scm/utils/dtc/dtc.git).  
 
 ```bash
-  $ pydtc -?
+  $ pydtc -h
 
-Usage: pydtc [OPTIONS] COMMAND [ARGS]...
+usage: pydtc [-h] [-v] {pack,unpack,merge,diff} ...
 
-  Device Tree Converter (DTC) is a tool for converting device tree binary
-  blob (*.dtb) to readable text file (*.dts) and reverse
+Flat Device Tree (FDT) tool for manipulation with *.dtb and *.dts files
 
-Options:
-  -v, --version  Show the version and exit.
-  -?, --help     Show this message and exit.
+positional arguments:
+  {pack,unpack,merge,diff}
+    pack                Pack *.dts into binary blob (*.dtb)
+    unpack              Unpack *.dtb into readable format (*.dts)
+    merge               Merge more files in *.dtb or *.dts format
+    diff                Compare two files in *.dtb or *.dts format
 
-Commands:
-  diff   Compare two *.dtb or *.dts files
-  merge  Merge two and more *.dtb or *.dts files
-  todtb  Convert *.dts to *.dtb
-  todts  Convert *.dtb to *.dts
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+
 ```
 
+### $ pydtc unpack [-h] [-s TAB_SIZE] [-o DTS_FILE] dtb_file
 
-#### $ pydtc todts [OPTIONS] INFILE
+Unpack Device Tree from binary blob *.dtb into readable text file *.dts
 
-Convert Device Tree in binary blob *.dtb to readable text file *.dts
+**dtb_file** - Single DTB file with `dtb` extension
 
-**INFILE** - Single DTB file as *.dtb
-
-##### options:
-* **-t, --tabsize** - Tabulator Size
-* **-o, --outfile** - Output path/file name (*.dts)
-* **-?, --help** - Show help message and exit
+##### optional arguments:
+* **-h, --help** - Show this help message and exit
+* **-s TAB_SIZE** - Tabulator Size
+* **-o DTS_FILE** - Output path/file name (*.dts)
 
 ##### Example:
 
-``` bash
-  $ pydtc todts test.dtb
+```bash
+pydtc unpack test.dtb
     
-    DTS saved as: test.dts
+DTS saved as: test.dts
 ```
 
-#### $ pydtc todtb [OPTIONS] INFILE
+#### $ pydtc pack [-h] [-v VERSION] [-l LC_VERSION] [-c CPU_ID] [-p] [-o DTB_FILE] dts_file
 
-Convert Device Tree in readable text file *.dts to binary blob *.dtb
 
-**INFILE** - Single DTS file as *.dts
+Pack Device Tree from readable text file *.dts into binary blob *.dtb
 
-##### options:
-* **-v, --version** - DTB Version
-* **-l, --lcversion** - DTB Last Compatible Version
-* **-c, --cpuid** - Boot CPU ID
-* **-a, --align** - Make the blob align to the <bytes>
-* **-p, --padding** - Add padding to the blob of <bytes> long
-* **-s, --size** - Make the blob at least <bytes> long
-* **-o, --outfile** - Output path/file name (*.dtb)
-* **-?, --help** - Show help message and exit
+**dts_file** - Single DTS file as *.dts
+
+##### optional arguments:
+* **-h, --help** - Show this help message and exit
+* **-v VERSION** - DTB Version
+* **-l LC_VERSION** - DTB Last Compatible Version
+* **-c CPU_ID** - Boot CPU ID
+* **-p** - Update phandle
+* **-o DTB_FILE** - Output path/file name (*.dtb)
 
 ##### Example:
 
 ``` bash
-  $ pydtc todtb -v 17 test.dts
+pydtc pack -v 17 test.dts
   
-    DTB saved as: test.dtb
+DTB saved as: test.dtb
 ```
 
-#### $ pydtc merge [OPTIONS] OUTFILE [INFILES]
+#### $ pydtc merge [-h] [-t {auto,dts,dtb}] [-s TAB_SIZE] out_file in_files [in_files ...]
+
 
 Merge two and more *.dtb or *.dts files into one *.dts file
 
-**OUTFILE** - The output file name with *.dts extension <br>
-**INFILES** - Two or more input files with *.dtb or *.dts extension
+**out_file** - The output file name with *.dts extension <br>
+**in_files** - Two or more input files with *.dtb or *.dts extension
 
-##### options:
-* **-t, --tabsize** - Tabulator Size
-* **-t, --intype** - Input file type: 'auto', 'dts', 'dtb' (default: auto)
-* **-?, --help** - Show help message and exit
+##### optional arguments:
+* **-h, --help** - Show this help message and exit
+* **-t {auto,dts,dtb}** - Input file type: 'auto', 'dts', 'dtb' (default: auto)
+* **-s TAB_SIZE** - Tabulator Size
 
 ##### Example:
 
-``` bash
-  $ pydtc merge out.dts test1.dtb test2.dtb
+```bash
+pydtc merge out.dts test1.dtb test2.dtb
     
-    Merge output saved as: out.dts
+Output saved as: out.dts
 ```
 
-#### $ pydtc diff [OPTIONS] FILE1 FILE2
+#### $ pydtc diff [-h] [-t {auto,dts,dtb}] [-o OUT_DIR] in_file1 in_file2
 
 Compare two dtb/dts files and generate 3 dts files (same in 1 and 2, specific for 1, specific for 2)
 
-**FILE1** - Input file 1 <br>
-**FILE2** - Input file 2
+**in_file1** - Input file 1 <br>
+**in_file2** - Input file 2
 
-##### options:
-* **-t, --intype** - Input file type: 'auto', 'dts', 'dtb' (default: auto)
-* **-o, --outdir** - Output directory/path (default: diff_out)
-* **-?, --help** - Show help message and exit
+##### optional arguments:
+* **-h, --help** - Show this help message and exit
+* **-t {auto,dts,dtb}** - Input file type: 'auto', 'dts', 'dtb' (default: auto)
+* **-o OUT_DIR** - Output directory (default: diff_out)
 
 ##### Example:
 
-``` bash
-  $ pydtc diff test1.dtb test2.dtb
+```bash
+pydtc diff test1.dtb test2.dtb
     
-    Diff output saved into: diff_out
+Output saved into: diff_out
 ```

@@ -1,267 +1,224 @@
-
 import fdt
 import struct
-import unittest
+import pytest
 
 
-class HeaderTestCase(unittest.TestCase):
+def test_header():
+    header = fdt.Header()
+    header.version = fdt.Header.MAX_VERSION
 
-    def setUp(self):
-        pass
+    assert header.magic == fdt.Header.MAGIC_NUMBER
+    assert header.version == fdt.Header.MAX_VERSION
+    assert header.size == fdt.Header.MAX_SIZE
 
-    def tearDown(self):
-        pass
+    with pytest.raises(ValueError):
+        header.version = fdt.Header.MAX_VERSION + 1
 
-    def test_init(self):
-        header = fdt.Header()
-        header.version = fdt.Header.MAX_VERSION
+    blob = struct.pack('>7I', fdt.Header.MAGIC_NUMBER, 0, 0, 0, 0, 1, 1)
+    header = fdt.Header.parse(blob)
 
-        self.assertEqual(header.magic, fdt.Header.MAGIC_NUMBER)
-        self.assertEqual(header.version, fdt.Header.MAX_VERSION)
-        self.assertEqual(header.size, fdt.Header.MAX_SIZE)
-
-    def test_version(self):
-        header = fdt.Header()
-        with self.assertRaises(ValueError):
-            header.version = fdt.Header.MAX_VERSION + 1
-
-    def test_parse(self):
-        blob = struct.pack('>7I', fdt.Header.MAGIC_NUMBER, 0, 0, 0, 0, 1, 1)
-        header = fdt.Header.parse(blob)
-
-        self.assertEqual(header.magic, fdt.Header.MAGIC_NUMBER)
-        self.assertEqual(header.version, 1)
-        self.assertEqual(header.size, 32)
+    assert header.magic == fdt.Header.MAGIC_NUMBER
+    assert header.version == 1
+    assert header.size == 32
 
 
-class PropertyTestCase(unittest.TestCase):
+def test_base_property():
+    prop = fdt.Property('prop')
 
-    def setUp(self):
-        pass
+    assert isinstance(prop, fdt.Property)
+    assert prop.name == 'prop'
 
-    def tearDown(self):
-        pass
+    with pytest.raises(AssertionError):
+        _ = fdt.Property('prop\0')
+    with pytest.raises(AssertionError):
+        _ = fdt.Property(5)
 
-    def test_init(self):
-        prop = fdt.Property('prop')
-        self.assertIsInstance(prop, fdt.Property)
-        self.assertEqual(prop.name, 'prop')
-        with self.assertRaises(AssertionError):
-            prop = fdt.Property('prop\0')
-        with self.assertRaises(AssertionError):
-            prop = fdt.Property(5)
+    prop1 = fdt.Property('prop1')
+    assert prop1 != prop
 
-    def test_compare(self):
-        prop1 = fdt.Property('prop1')
-        prop2 = fdt.Property('prop2')
-        self.assertEqual(prop1, prop1)
-        self.assertNotEqual(prop1, prop2)
+    prop1 = fdt.Property('prop')
+    assert prop1 == prop
 
-    def test_export(self):
-        prop = fdt.Property('prop')
-        str_data = prop.to_dts()
-        self.assertEqual(str_data, 'prop;\n')
-        blob_data, str_data, pos = prop.to_dtb('')
-        self.assertEqual(blob_data, struct.pack('>III', 0x03, 0, 0))
-        self.assertEqual(str_data, 'prop\0')
-        self.assertEqual(pos, 12)
+    str_data = prop.to_dts()
+    assert str_data == 'prop;\n'
+
+    blob_data, str_data, pos = prop.to_dtb('')
+    assert blob_data == struct.pack('>III', 0x03, 0, 0)
+    assert str_data == 'prop\0'
+    assert pos == 12
 
 
-class PropStringsTestCase(unittest.TestCase):
+def test_strings_property():
+    prop = fdt.PropStrings('prop', 'test', 'test')
 
-    def setUp(self):
-        pass
+    assert isinstance(prop, fdt.PropStrings)
+    assert prop.name == 'prop'
+    assert len(prop) == 2
+    assert prop.data == ['test', 'test']
 
-    def tearDown(self):
-        pass
+    with pytest.raises(AssertionError):
+        prop.append('test\0')
+    with pytest.raises(AssertionError):
+        prop.append(5)
 
-    def test_init(self):
-        prop = fdt.PropStrings('prop')
-        prop.append("test")
-        prop.append("test")
-        self.assertIsInstance(prop, fdt.PropStrings)
-        self.assertEqual(prop.name, 'prop')
-        self.assertEqual(len(prop), 2)
-        with self.assertRaises(AssertionError):
-            prop.append('test\0')
-        with self.assertRaises(AssertionError):
-            prop.append(5)
+    prop1 = fdt.PropStrings('prop', 'test', 'test', 'test')
+    assert prop1 != prop
 
-    def test_compare(self):
-        prop1 = fdt.PropStrings('prop', 'test', 'test')
-        prop2 = fdt.PropStrings('prop', 'test', 'test', 'test')
-        self.assertEqual(prop1, prop1)
-        self.assertNotEqual(prop1, prop2)
-        prop1.append("test")
-        self.assertEqual(prop1, prop2)
-        prop1.append("test")
-        self.assertNotEqual(prop1, prop2)
+    prop.append("test")
+    assert len(prop) == 3
+    assert prop1 == prop
 
-    def test_export(self):
-        prop = fdt.PropStrings('prop', 'test', 'test')
-        str_data = prop.to_dts()
-        self.assertEqual(str_data, 'prop = "test", "test";\n')
+    str_data = prop.to_dts()
+    assert str_data == 'prop = "test", "test", "test";\n'
 
 
-class PropWordsTestCase(unittest.TestCase):
+def test_words_property():
+    prop = fdt.PropWords('prop', 0x11111111, 0x55555555)
 
-    def setUp(self):
-        self.prop_a = fdt.PropWords('prop', 0x11111111, 0x55555555)
-        self.prop_b = fdt.PropWords('prop', 0x11111111, 0x55555555, 0x00)
+    assert isinstance(prop, fdt.PropWords)
+    assert prop.name == 'prop'
+    assert len(prop) == 2
+    assert prop.data == [0x11111111, 0x55555555]
 
-    def tearDown(self):
-        pass
+    with pytest.raises(AssertionError):
+        prop.append('test')
+    with pytest.raises(AssertionError):
+        prop.append(0x5555555555)
 
-    def test_init(self):
-        self.assertIsInstance(self.prop_a, fdt.Property)
-        self.assertEqual(self.prop_a.name, 'prop')
-        self.assertEqual(len(self.prop_a), 2)
-        self.prop_a.append(0x00)
-        self.assertEqual(len(self.prop_a), 3)
-        with self.assertRaises(AssertionError):
-            self.prop_a.append('test')
-        with self.assertRaises(AssertionError):
-            self.prop_a.append(0x5555555555)
+    prop1 = fdt.PropWords('prop', 0x11111111, 0x55555555, 0x00)
+    assert prop1 != prop
 
-    def test_compare(self):
-        self.assertEqual(self.prop_a, self.prop_a)
-        self.assertNotEqual(self.prop_a, self.prop_b)
-        self.prop_a.append(0x00)
-        self.assertEqual(self.prop_a, self.prop_b)
-        self.prop_a.append(0x00)
-        self.assertNotEqual(self.prop_a, self.prop_b)
+    prop.append(0x00)
+    assert len(prop) == 3
+    assert prop1 == prop
 
-    def test_export(self):
-        str_data = self.prop_a.to_dts()
-        self.assertEqual(str_data, 'prop = <0x11111111 0x55555555>;\n')
+    str_data = prop.to_dts()
+    assert str_data == 'prop = <0x11111111 0x55555555 0x0>;\n'
 
 
-class PropBytesTestCase(unittest.TestCase):
+def test_bytes_property():
+    prop = fdt.PropBytes('prop', [0x10, 0x50])
 
-    def setUp(self):
-        self.prop_a = fdt.PropBytes('prop', [0x10, 0x50])
-        self.prop_b = fdt.PropBytes('prop', [0x10, 0x50, 0x00])
+    assert isinstance(prop, fdt.PropBytes)
+    assert prop.name == 'prop'
+    assert len(prop) == 2
+    assert prop.data == b"\x10\x50"
 
-    def tearDown(self):
-        pass
+    with pytest.raises(AssertionError):
+        prop.append('test')
+    with pytest.raises(AssertionError):
+        prop.append(256)
 
-    def test_init(self):
-        self.assertIsInstance(self.prop_a, fdt.Property)
-        self.assertEqual(self.prop_a.name, 'prop')
-        self.assertEqual(len(self.prop_a), 2)
-        self.prop_a.append(0x00)
-        self.assertEqual(len(self.prop_a), 3)
-        with self.assertRaises(AssertionError):
-            self.prop_a.append('test')
-        with self.assertRaises(AssertionError):
-            self.prop_a.append(256)
+    prop1 = fdt.PropBytes('prop', [0x10, 0x50, 0x00])
+    assert prop1 != prop
 
-    def test_compare(self):
-        self.assertEqual(self.prop_a, self.prop_a)
-        self.assertNotEqual(self.prop_a, self.prop_b)
-        self.prop_a.append(0x00)
-        self.assertEqual(self.prop_a, self.prop_b)
-        self.prop_a.append(0x00)
-        self.assertNotEqual(self.prop_a, self.prop_b)
+    prop.append(0x00)
+    assert len(prop) == 3
+    assert prop1 == prop
 
-    def test_export(self):
-        str_data = self.prop_a.to_dts()
-        self.assertEqual(str_data, 'prop = [10 50];\n')
+    str_data = prop.to_dts()
+    assert str_data == 'prop = [10 50 00];\n'
 
 
-class NodeTestCase(unittest.TestCase):
+def test_node():
+    # create node object
+    node = fdt.Node('/')
+    node.append(fdt.Property('prop'))
+    node.append(fdt.PropStrings('prop_str', 'test', 'test'))
+    node.append(fdt.PropWords('prop_word', 0x11111111, 0x55555555))
+    node.append(fdt.PropBytes('prop_byte', [0x10, 0x50]))
+    subnode0 = fdt.Node('subnode0')
+    subnode0.append(fdt.Property('prop0'))
+    subnode0.append(fdt.PropStrings('prop_str0', 'test'))
+    subnode1 = fdt.Node('subnode1')
+    subnode1.append(fdt.Property('prop1'))
+    subnode1.append(fdt.PropWords('prop_word1', 0x11111111))
+    subnode0.append(subnode1)
+    node.append(subnode0)
 
-    def setUp(self):
-        self.node_a = fdt.Node('/')
-        self.node_a.append(fdt.Property('prop'))
-        self.node_a.append(fdt.PropStrings('prop_str', 'test', 'test'))
-        self.node_a.append(fdt.PropWords('prop_word', 0x11111111, 0x55555555))
-        self.node_a.append(fdt.PropBytes('prop_byte', [0x10, 0x50]))
-        self.node_a.append(fdt.Node('sub_node'))
+    assert isinstance(node, fdt.Node)
+    assert node.name == '/'
+    assert len(node.props) == 4
+    assert len(node.nodes) == 1
 
-    def tearDown(self):
-        pass
+    # Use only node constructor
+    new_node = fdt.Node('/',
+                        fdt.Property('prop'),
+                        fdt.PropStrings('prop_str', 'test', 'test'),
+                        fdt.PropWords('prop_word', 0x11111111, 0x55555555),
+                        fdt.PropBytes('prop_byte', [0x10, 0x50]),
+                        fdt.Node('subnode0',
+                                 fdt.Property('prop0'),
+                                 fdt.PropStrings('prop_str0', 'test'),
+                                 fdt.Node('subnode1',
+                                          fdt.Property('prop1'),
+                                          fdt.PropWords('prop_word1', 0x11111111)
+                                          )
+                                 )
+                        )
 
-    def test_init(self):
-        self.assertIsInstance(self.node_a, fdt.Node)
-        self.assertEqual(self.node_a.name, '/')
-        self.assertEqual(len(self.node_a.props), 4)
-        self.assertEqual(len(self.node_a.nodes), 1)
-        with self.assertRaises(AssertionError):
-            self.node_a.append('test')
-        with self.assertRaises(Exception):
-            self.node_a.append(256)
-        with self.assertRaises(Exception):
-            self.node_a.append(fdt.Property('prop'))
+    assert node == new_node
 
-    def test_compare(self):
-        self.assertEqual(self.node_a, self.node_a)
-        node_b = self.node_a.copy()
-        self.assertEqual(self.node_a, node_b)
-        node_b.append(fdt.PropBytes('prop_next', [0x10, 0x50]))
-        self.assertNotEqual(self.node_a, node_b)
+    with pytest.raises(AssertionError):
+        node.append('test')
+    with pytest.raises(Exception):
+        node.append(256)
+    with pytest.raises(Exception):
+        node.append(fdt.Property('prop'))
 
-    def test_append(self):
-        root_node = self.node_a.copy()
-        root_node.append(fdt.Node('node_a', props=[fdt.Property('prop_a')]))
-        root_node.append(fdt.Node('node_b', props=[fdt.Property('prop_b')]))
-        root_node.append(fdt.Node('node_c', props=[fdt.Property('prop_c')]))
-        node = root_node.get_subnode('node_a')
-        self.assertIsInstance(node, fdt.Node)
-        prop = node.get_property('prop_a')
-        self.assertIsInstance(prop, fdt.Property)
-        node.remove_property('prop_a')
-        prop = node.get_property('prop_a')
-        self.assertIsNone(prop, fdt.Property)
+    copy_node = node.copy()
+    assert copy_node == node
 
-    def test_merge(self):
-        root_node = self.node_a.copy()
-        root_node.append(fdt.Node('node_a', props=[fdt.Property('prop_a')]))
-        root_node.append(fdt.Node('node_b', props=[fdt.Property('prop_b')]))
-        root_node.append(fdt.Node('node_c', props=[fdt.Property('prop_c')]))
-        node = self.node_a.copy()
-        node.set_name("test_node")
-        root_node.merge(node)
-        self.assertNotEqual(root_node, node)
+    copy_node.set_property('prop_word', [0x10, 0x50])
+    assert copy_node != node
 
-    def test_export(self):
-        str_data = self.node_a.to_dts()
-        out  = "/ {\n"
-        out += "    prop;\n"
-        out += "    prop_str = \"test\", \"test\";\n"
-        out += "    prop_word = <0x11111111 0x55555555>;\n"
-        out += "    prop_byte = [10 50];\n"
-        out += "    sub_node {\n"
-        out += "    };\n"
-        out += "};\n"
-        self.assertEqual(str_data, out)
+    # export to dts
+    str_data = node.to_dts()
+    out = "/ {\n"
+    out += "    prop;\n"
+    out += "    prop_str = \"test\", \"test\";\n"
+    out += "    prop_word = <0x11111111 0x55555555>;\n"
+    out += "    prop_byte = [10 50];\n"
+    out += "    subnode0 {\n"
+    out += "        prop0;\n"
+    out += "        prop_str0 = \"test\";\n"
+    out += "        subnode1 {\n"
+    out += "            prop1;\n"
+    out += "            prop_word1 = <0x11111111>;\n"
+    out += "        };\n"
+    out += "    };\n"
+    out += "};\n"
 
-    def test_set_property(self):
-        root_node = fdt.Node('/')
-        # add properties into node by set_property method
-        root_node.set_property('prop', None)
-        root_node.set_property('int_prop', 1000)
-        root_node.set_property('list_int_prop', [1, 2])
-        root_node.set_property('str_prop', 'value')
-        root_node.set_property('list_str_prop', ['value1', 'value2'])
-        root_node.set_property('bytes_prop', b'\x00\x55\x66')
-        # validate types and values
-        self.assertEqual(len(root_node.props), 6)
-        self.assertIsInstance(root_node.get_property('prop'), fdt.Property)
-        self.assertIsInstance(root_node.get_property('int_prop'), fdt.PropWords)
-        self.assertEqual(root_node.get_property('int_prop').data, [1000])
-        self.assertIsInstance(root_node.get_property('list_int_prop'), fdt.PropWords)
-        self.assertEqual(root_node.get_property('list_int_prop').data, [1, 2])
-        self.assertIsInstance(root_node.get_property('str_prop'), fdt.PropStrings)
-        self.assertEqual(root_node.get_property('str_prop').data, ['value'])
-        self.assertIsInstance(root_node.get_property('list_str_prop'), fdt.PropStrings)
-        self.assertEqual(root_node.get_property('list_str_prop').data, ['value1', 'value2'])
-        self.assertIsInstance(root_node.get_property('bytes_prop'), fdt.PropBytes)
-        self.assertEqual(root_node.get_property('bytes_prop').data, b'\x00\x55\x66')
-        # update property in node by set_property method
-        root_node.set_property('list_int_prop', [1, 2, 3])
-        # validate property value
-        self.assertEqual(root_node.get_property('list_int_prop').data, [1, 2, 3])
+    assert str_data == out
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_node_set_property():
+    root_node = fdt.Node('/')
+
+    # add properties into node by set_property method
+    root_node.set_property('prop', None)
+    root_node.set_property('int_prop', 1000)
+    root_node.set_property('list_int_prop', [1, 2])
+    root_node.set_property('str_prop', 'value')
+    root_node.set_property('list_str_prop', ['value1', 'value2'])
+    root_node.set_property('bytes_prop', b'\x00\x55\x66')
+
+    # validate types and values
+    assert len(root_node.props) == 6
+    assert isinstance(root_node.get_property('prop'), fdt.Property)
+    assert isinstance(root_node.get_property('int_prop'), fdt.PropWords)
+    assert root_node.get_property('int_prop').value == 1000
+    assert isinstance(root_node.get_property('list_int_prop'), fdt.PropWords)
+    assert root_node.get_property('list_int_prop').data == [1, 2]
+    assert isinstance(root_node.get_property('str_prop'), fdt.PropStrings)
+    assert root_node.get_property('str_prop').value == 'value'
+    assert isinstance(root_node.get_property('list_str_prop'), fdt.PropStrings)
+    assert root_node.get_property('list_str_prop').data == ['value1', 'value2']
+    assert isinstance(root_node.get_property('bytes_prop'), fdt.PropBytes)
+    assert root_node.get_property('bytes_prop').data == b'\x00\x55\x66'
+
+    # update property in node by set_property method
+    root_node.set_property('list_int_prop', [1, 2, 3])
+
+    # validate property value
+    assert root_node.get_property('list_int_prop').data == [1, 2, 3]

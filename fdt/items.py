@@ -15,7 +15,7 @@
 from struct import unpack, pack
 from string import printable
 
-from .head import Header, DTB_PROP, DTB_BEGIN_NODE, DTB_END_NODE
+from .header import Header, DTB_PROP, DTB_BEGIN_NODE, DTB_END_NODE
 from .misc import is_string, line_offset
 
 
@@ -51,7 +51,7 @@ def new_property(name, raw_value):
 # Base Class
 ########################################################################################################################
 
-class BaseItem(object):
+class BaseItem:
 
     @property
     def name(self):
@@ -63,41 +63,46 @@ class BaseItem(object):
 
     @property
     def path(self):
-        path = []
-        node = self.parent
-        while node is not None:
+        node = self._parent
+        path = ""
+        while node:
             if node.name == '/': break
-            path.append(node.name)
+            path = '/' + node.name + path
             node = node.parent
-        return '/' + '/'.join(path[::-1])
+        return path if path else '/'
 
-    def __init__(self, name, **kwargs):
-        """ Init BaseItem
+    def __init__(self, name):
+        """ 
+        BaseItem constructor
+        
         :param name: Item name
-        :param parent: Item parent
-        :return Item object
         """
-        assert isinstance(name, str), "The value must be a string type !"
+        assert isinstance(name, str)
         assert all(c in printable for c in name), "The value must contain just printable chars !"
-        assert 'parent' not in kwargs or isinstance(kwargs['parent'], Node), "Invalid object type"
         self._name = name
-        self._parent = kwargs['parent'] if 'parent' in kwargs else None
+        self._parent = None
 
     def __str__(self):
-        """String representation"""
-        return "{}".format(self.name)
-
-    def __ne__(self, node):
-        """Check node inequality"""
-        return not self.__eq__(node)
+        """ String representation """
+        return f"{self.name}"
 
     def set_name(self, value):
-        assert isinstance(value, str), "The value must be a string type !"
+        """ 
+        Set item name
+        
+        :param value: The name in string format
+        """
+        assert isinstance(value, str)
         assert all(c in printable for c in value), "The value must contain just printable chars !"
         self._name = value
 
     def set_parent(self, value):
-        assert isinstance(value, Node), "Invalid object type"
+        """ 
+        Set item parent
+
+        :param value: The parent node 
+        """
+        assert isinstance(value, Node)
         self._parent = value
 
     def to_dts(self, tabsize=4, depth=0):
@@ -113,39 +118,24 @@ class BaseItem(object):
 
 class Property(BaseItem):
 
-    def __init__(self, name, **kwargs):
-        """ Property init.
-        :param name: Property name
-        :param parent: Property parent
-        :return Property object
-        """
-        super().__init__(name, **kwargs)
-
-    def __str__(self):
-        """String representation"""
-        return "{}".format(self.name)
-
     def __getitem__(self, value):
-        """Returns No Items"""
+        """ Returns No Items """
         return None
 
-    def __eq__(self, prop):
-        """Check properties are the same (same names) """
-        if not isinstance(prop, Property):
-            return False
-        if self.name != prop.name:
-            return False
-        return True
+    def __eq__(self, obj):
+        """ Check Property object equality """
+        return isinstance(obj, Property) and self.name == obj.name
 
     def copy(self):
+        """ Get object copy """
         return Property(self.name)
 
     def to_dts(self, tabsize=4, depth=0):
-        """Get dts string representation"""
+        """ Get dts string representation """
         return line_offset(tabsize, depth, '{};\n'.format(self.name))
 
     def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """Get blob representation"""
+        """ Get blob representation """
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
             strpos = len(strings)
@@ -157,48 +147,53 @@ class Property(BaseItem):
 class PropStrings(Property):
     """Property with strings as value"""
 
-    def __init__(self, name, *args, **kwargs):
-        """ Init property strings
+    @property
+    def value(self):
+        return self.data[0] if self.data else None
+
+    def __init__(self, name, *args):
+        """ 
+        PropStrings constructor
+        
         :param name: Property name
         :param args: str1, str2, ...
-        :param parent: Property parent
-        :return Property object
         """
-        super().__init__(name, **kwargs)
+        super().__init__(name)
         self.data = []
         for arg in args:
             self.append(arg)
 
     def __str__(self):
-        """String representation"""
+        """ String representation """
         return "{} = {}".format(self.name, self.data)
 
     def __len__(self):
-        """Get strings count"""
+        """ Get strings count """
         return len(self.data)
 
     def __getitem__(self, index):
-        """Get strings, returns a string"""
+        """ Get string by index """
         return self.data[index]
 
-    def __eq__(self, prop):
-        """Check properties are the same (same values)"""
-        if not isinstance(prop, PropStrings):
+    def __eq__(self, obj):
+        """ Check PropStrings object equality """
+        if not isinstance(obj, PropStrings):
             return False
-        if self.name != prop.name:
+        if self.name != obj.name:
             return False
-        if len(self) != len(prop):
+        if len(self) != len(obj):
             return False
         for index in range(len(self)):
-            if self.data[index] != prop[index]:
+            if self.data[index] != obj[index]:
                 return False
         return True
 
     def copy(self):
+        """ Get object copy """
         return PropStrings(self.name, *self.data)
 
     def append(self, value):
-        assert isinstance(value, str), "Invalid object type"
+        assert isinstance(value, str)
         assert len(value) > 0, "Invalid strings value"
         assert all(c in printable or c in ('\r', '\n') for c in value), "Invalid chars in strings value"
         self.data.append(value)
@@ -211,7 +206,7 @@ class PropStrings(Property):
         self.data.clear()
 
     def to_dts(self, tabsize=4, depth=0):
-        """Get DTS representation"""
+        """ Get dts string representation """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = "'
         result += '", "'.join(self.data)
@@ -219,7 +214,7 @@ class PropStrings(Property):
         return result
 
     def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """Get DTB representation"""
+        """Get dtb blob representation"""
         blob = pack('')
         for chars in self.data:
             blob += chars.encode('ascii') + pack('b', 0)
@@ -240,38 +235,37 @@ class PropStrings(Property):
 class PropWords(Property):
     """Property with words as value"""
 
-    def __init__(self, name, *args, **kwargs):
-        """Init property words
+    @property
+    def value(self):
+        return self.data[0] if self.data else None
+
+    def __init__(self, name, *args):
+        """
+        PropWords constructor
+
         :param name: Property name
         :param args: word1, word2, ...
-        :param kwargs - optional arguments
-               data:
-               wsize:
         """
-        super().__init__(name, **kwargs)
+        super().__init__(name)
         self.data = []
-        self.word_size = kwargs['wsize'] if 'wsize' in kwargs else 32
+        self.word_size = 32
         for val in args:
             self.append(val)
-        if 'data' in kwargs:
-            assert isinstance(kwargs['data'], list), "\"data\" argument must be a list type !"
-            for val in kwargs['data']:
-                self.append(val)
 
     def __str__(self):
-        """String representation"""
+        """ String representation """
         return "{} = {}".format(self.name, self.data)
 
     def __getitem__(self, index):
-        """Get words, returns a word integer"""
+        """ Get word by index """
         return self.data[index]
 
     def __len__(self):
-        """Get words count"""
+        """ Get words count """
         return len(self.data)
 
     def __eq__(self, prop):
-        """Check properties are the same (same values)"""
+        """ Check PropWords object equality  """
         if not isinstance(prop, PropWords):
             return False
         if self.name != prop.name:
@@ -284,7 +278,7 @@ class PropWords(Property):
         return True
 
     def copy(self):
-        return PropWords(self.name, *self.data, wsize=self.word_size)
+        return PropWords(self.name, *self.data)
 
     def append(self, value):
         assert isinstance(value, int), "Invalid object type"
@@ -300,7 +294,7 @@ class PropWords(Property):
         self.data.clear()
 
     def to_dts(self, tabsize=4, depth=0):
-        """Get DTS representation"""
+        """ Get dts representation """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = <'
         result += ' '.join(["0x{:X}".format(word) for word in self.data])
@@ -308,7 +302,7 @@ class PropWords(Property):
         return result
 
     def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """Get DTB representation"""
+        """ Get dtb blob representation """
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
             strpos = len(strings)
@@ -324,29 +318,32 @@ class PropBytes(Property):
     """Property with bytes as value"""
 
     def __init__(self, name, data=None):
-        """ Init property bytes
+        """ 
+        PropBytes constructor
+        
         :param name: Property name
         :param data: Data as list, bytes or bytearray
-        :param parent: Property parent
-        :return Property object
         """
         super().__init__(name)
-        self.data = bytearray() if data is None else bytearray(data)
+        self.data = bytearray() 
+        if data:
+            assert isinstance(data, (list, bytes, bytearray))
+            self.data = bytearray(data)
 
     def __str__(self):
-        """String representation"""
+        """ String representation """
         return "{} = {}".format(self.name, self.data)
 
     def __getitem__(self, index):
-        """Get words, returns a word integer"""
+        """Get byte by index """
         return self.data[index]
 
     def __len__(self):
-        """Get words count"""
+        """ Get bytes count """
         return len(self.data)
 
     def __eq__(self, prop):
-        """ Check properties are the same (same values) """
+        """ Check PropBytes object equality  """
         if not isinstance(prop, PropBytes):
             return False
         if self.name != prop.name:
@@ -405,18 +402,20 @@ class PropIncBin(PropBytes):
     """Property with bytes as value"""
 
     def __init__(self, name, data=None, file_name=None, rpath=None):
-        """ Init property bytes
+        """
+        PropIncBin constructor
+
         :param name: Property name
         :param data: Data as list, bytes or bytearray
-        :param parent: Property parent
-        :return Property object
+        :param file_name: File name
+        :param rpath: Relative path
         """
         super().__init__(name, data)
         self.file_name = file_name
         self.relative_path = rpath
 
     def __eq__(self, prop):
-        """ Check properties are the same (same values) """
+        """ Check PropIncBin object equality  """
         if not isinstance(prop, PropIncBin):
             return False
         if self.name != prop.name:
@@ -434,7 +433,12 @@ class PropIncBin(PropBytes):
         return PropIncBin(self.name, self.data, self.file_name, self.relative_path)
 
     def to_dts(self, tabsize=4, depth=0):
-        """ Get DTS representation """
+        """ 
+        Get DTS representation
+        
+        :param tabsize: Count of spaces for tabulator size
+        :param depth: Start depth
+        """
         file_path = self.file_name
         if self.relative_path is not None:
             file_path = "{}/{}".format(self.relative_path, self.file_name)
@@ -462,29 +466,29 @@ class Node(BaseItem):
     def empty(self):
         return False if self.nodes or self.props else True
 
-    def __init__(self, name, **kwargs):
-        """ Create Node item
+    def __init__(self, name, *args):
+        """ 
+        Node constructor
+        
         :param name: Node name
-        :param props: List of properties
-        :param nodes: List of sub-nodes
+        :param args: List of properties and subnodes
         """
-        assert 'props' not in kwargs or isinstance(kwargs['props'], list), "Invalid object type"
-        assert 'nodes' not in kwargs or isinstance(kwargs['nodes'], list), "Invalid object type"
-        super().__init__(name, **kwargs)
-        self._props = kwargs['props'] if 'props' in kwargs else []
-        self._nodes = kwargs['nodes'] if 'nodes' in kwargs else []
+        super().__init__(name)
+        self._props = []
+        self._nodes = []
+        for item in args:
+            self.append(item)
 
     def __str__(self):
-        """String representation"""
+        """ String representation """
         return "< {}: {} props, {} nodes >".format(self.name, len(self.props), len(self.nodes))
 
     def __eq__(self, node):
-        """Check node equality"""
+        """ Check node equality """
         if not isinstance(node, Node):
-            raise ValueError("Invalid object type")
-        if self.name != node.name:
             return False
-        if len(self.props) != len(node.props) or \
+        if self.name != node.name or \
+           len(self.props) != len(node.props) or \
            len(self.nodes) != len(node.nodes):
             return False
         for p in self.props:
@@ -498,18 +502,17 @@ class Node(BaseItem):
     def copy(self):
         """ Create a copy of Node object """
         node = Node(self.name)
-
         for p in self.props:
             node.append(p.copy())
         for n in self.nodes:
             node.append(n.copy())
-
         return node
 
     def get_property(self, name):
-        """ Get property obj by name
+        """ 
+        Get property object by its name
+        
         :param name: Property name
-        :return property object
         """
         for p in self.props:
             if p.name == name:
@@ -517,6 +520,12 @@ class Node(BaseItem):
         return None
 
     def set_property(self, name, value):
+        """
+        Set property
+
+        :param name: Property name
+        :param value: Property value
+        """
         if value is None:
             new_prop = Property(name)
         elif isinstance(value, int):
@@ -540,9 +549,10 @@ class Node(BaseItem):
             self.props[index] = new_prop
 
     def get_subnode(self, name):
-        """ Get sub-node obj by name
-        :param name: Sub-node name
-        :return node object
+        """ 
+        Get subnode object by name
+
+        :param name: Subnode name
         """
         for n in self.nodes:
             if n.name == name:
@@ -550,21 +560,25 @@ class Node(BaseItem):
         return None
 
     def exist_property(self, name):
-        """ Check if property exist
+        """ 
+        Check if property exist and return True if exist else False
+        
         :param name: Property name
-        :return True if property exist else False
         """
         return False if self.get_property(name) is None else True
 
     def exist_subnode(self, name):
-        """ Check if sub-node exist
-        :param name: Sub-node name
-        :return True if sub-node exist else False
+        """ 
+        Check if subnode exist and return True if exist else False
+        
+        :param name: Subnode name
         """
         return False if self.get_subnode(name) is None else True
 
     def remove_property(self, name):
-        """ Remove property obj by its name.
+        """ 
+        Remove property object by its name.
+        
         :param name: Property name
         """
         item = self.get_property(name)
@@ -572,15 +586,19 @@ class Node(BaseItem):
             self.props.remove(item)
 
     def remove_subnode(self, name):
-        """ Remove sub-node obj by its name.
-        :param name: Sub-node name
+        """ 
+        Remove subnode object by its name.
+        
+        :param name: Subnode name
         """
         item = self.get_subnode(name)
         if item is not None:
             self.nodes.remove(item)
 
     def append(self, item):
-        """ Append sub-node or property
+        """ 
+        Append node or property
+        
         :param item: The node or property object
         """
         assert isinstance(item, (Node, Property)), "Invalid object type, use \"Node\" or \"Property\""
@@ -600,7 +618,9 @@ class Node(BaseItem):
             self.nodes.append(item)
 
     def merge(self, node_obj, replace=True):
-        """ Merge two nodes and sub-nodes.
+        """ 
+        Merge two nodes
+        
         :param node_obj: Node object
         :param replace: If True, replace current properties with the given properties
         """
@@ -641,10 +661,11 @@ class Node(BaseItem):
                 self._nodes[index].merge(sub_node, replace)
 
     def to_dts(self, tabsize=4, depth=0):
-        """ Get NODE in string representation
-        :param tabsize:
-        :param depth:
-        :return string
+        """ 
+        Get NODE in string representation
+        
+        :param tabsize: Count of spaces for tabulator size
+        :param depth: Node depth
         """
         dts  = line_offset(tabsize, depth, self.name + ' {\n')
         dts += ''.join([prop.to_dts(tabsize, depth + 1) for prop in self._props])
@@ -653,11 +674,12 @@ class Node(BaseItem):
         return dts
 
     def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """ Get NODE in binary blob representation
-        :param strings:
+        """ 
+        Get NODE in binary blob representation
+        
+        :param strings: 
         :param pos:
         :param version:
-        :return
         """
         if self.name == '/':
             blob = pack('>II', DTB_BEGIN_NODE, 0)
