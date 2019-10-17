@@ -90,7 +90,7 @@ class FDT(object):
                         item = Node(name)
                         node.append(item)
                     else:
-                        raise ValueError("Path \"{}\" doesn't exists".format(self, path))
+                        raise ValueError("Path \"{}\" doesn't exists".format(path))
                 node = item
 
         return node
