@@ -30,7 +30,7 @@ DTB_END = 0x9
 # Header Class
 ########################################################################################################################
 
-class Header(object):
+class Header:
 
     MIN_SIZE = 4 * 7
     MAX_SIZE = 4 * 10
@@ -40,17 +40,13 @@ class Header(object):
     MAGIC_NUMBER = 0xD00DFEED
 
     @property
-    def magic(self):
-        return self.MAGIC_NUMBER
-
-    @property
     def version(self):
         return self._version
 
     @version.setter
     def version(self, value):
         if value > self.MAX_VERSION:
-            raise ValueError("Not supported version, use: 0 - 17 !")
+            raise ValueError(f"Invalid Version {value}, use: 0 - 17 !")
         # update size and padding
         self._size = self.MIN_SIZE
         if value >= 2:
@@ -96,47 +92,15 @@ class Header(object):
         nfo += '- Size:    {}'.format(self.size)
         return nfo
 
-    @classmethod
-    def parse(cls, data: bytes, offset: int = 0):
-        data_offset = cls.MIN_SIZE
-        if len(data) < (offset + data_offset):
-            raise ValueError("Data size too small !")
-
-        header_vals = unpack_from('>7I', data, offset)
-        if header_vals[0] != cls.MAGIC_NUMBER:
-            raise Exception('Invalid Magic')
-        if header_vals[5] > cls.MAX_VERSION:
-            raise Exception('Invalid Version {}'.format(header_vals[5]))
-        if header_vals[6] > cls.MAX_VERSION - 1:
-            raise Exception('Invalid last compatible Version {}'.format(header_vals[6]))
-
-        header = cls()
-        header.total_size = header_vals[1]
-        header.off_dt_struct = header_vals[2]
-        header.off_dt_strings = header_vals[3]
-        header.off_mem_rsvmap = header_vals[4]
-        header.version = header_vals[5]
-        header.last_comp_version = header_vals[6]
-
-        if header.version >= 2:
-            header.boot_cpuid_phys = unpack_from('>I', data, offset + data_offset)[0]
-            data_offset += 4
-
-        if header.version >= 3:
-            header.size_dt_strings = unpack_from('>I', data, offset + data_offset)[0]
-            data_offset += 4
-
-        if header.version >= 17:
-            header.size_dt_struct = unpack_from('>I', data, offset + data_offset)[0]
-            data_offset += 4
-
-        return header
-
     def export(self) -> bytes:
+        """
+
+        :return:
+        """
         if self.version is None:
             raise Exception("Header Version must be specified !")
 
-        blob = pack('>7I', self.magic, self.total_size, self.off_dt_struct, self.off_dt_strings,
+        blob = pack('>7I', self.MAGIC_NUMBER, self.total_size, self.off_dt_struct, self.off_dt_strings,
                     self.off_mem_rsvmap, self.version, self.last_comp_version)
         if self.version >= 2:
             blob += pack('>I', self.boot_cpuid_phys)
@@ -148,3 +112,42 @@ class Header(object):
             blob += bytes([0] * self.padding)
 
         return blob
+
+    @classmethod
+    def parse(cls, data: bytes, offset: int = 0):
+        """
+
+        :param data:
+        :param offset:
+        """
+        if len(data) < (offset + cls.MIN_SIZE):
+            raise ValueError('Data size too small !')
+
+        header = cls()
+        (magic_number,
+         header.total_size,
+         header.off_dt_struct,
+         header.off_dt_strings,
+         header.off_mem_rsvmap,
+         header.version,
+         header.last_comp_version) = unpack_from('>7I', data, offset)
+        offset += cls.MIN_SIZE
+
+        if magic_number != cls.MAGIC_NUMBER:
+            raise Exception('Invalid Magic Number')
+        if header.last_comp_version > cls.MAX_VERSION - 1:
+            raise Exception(f'Invalid last compatible Version {header.last_comp_version}')
+
+        if header.version >= 2:
+            header.boot_cpuid_phys = unpack_from('>I', data, offset)[0]
+            offset += 4
+
+        if header.version >= 3:
+            header.size_dt_strings = unpack_from('>I', data, offset)[0]
+            offset += 4
+
+        if header.version >= 17:
+            header.size_dt_struct = unpack_from('>I', data, offset)[0]
+            offset += 4
+
+        return header

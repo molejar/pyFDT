@@ -1,6 +1,7 @@
 language: python
 python:
   - "3.6"
+  - "3.7"
 before_install:
   - pip install pytest pytest-console-scripts
   - pip install pytest-cov

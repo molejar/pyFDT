@@ -51,7 +51,7 @@ def parse_fdt(file_path: str, file_type: str):
 ########################################################################################################################
 # Commands Functions
 ########################################################################################################################
-def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int, phandle: bool):
+def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int, update_phandles: bool):
     """
     The pack command function.
 
@@ -60,15 +60,15 @@ def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int
     :param version: DTB version
     :param lc_version: DTB Last Compatible Version
     :param cpu_id: Boot CPU ID
-    :param phandle: True if update phandles else False
+    :param update_phandles: If True phandles will be updated
     """
 
     if version is not None and version > fdt.Header.MAX_VERSION:
         raise Exception(f"DTB Version must be lover or equal {fdt.Header.MAX_VERSION} !")
 
     fdt_obj = parse_fdt(in_file, 'dts')
-    if phandle:
-        fdt_obj.update_phandle()
+    if update_phandles:
+        fdt_obj.update_phandles()
     raw_data = fdt_obj.to_dtb(version, lc_version, cpu_id)
 
     with open(out_file, 'wb') as f:
@@ -171,7 +171,7 @@ def main():
     pack_parser.add_argument('-v', dest='version', type=int, help='DTB Version')
     pack_parser.add_argument('-l', dest='lc_version', type=int, help='DTB Last Compatible Version')
     pack_parser.add_argument('-c', dest='cpu_id', type=int, help='Boot CPU ID')
-    pack_parser.add_argument('-p', dest='phandle', action='store_true', help='Update phandle')
+    pack_parser.add_argument('-p', dest='phandles', action='store_true', help='Update phandles')
     pack_parser.add_argument('-o', dest='dtb_file', type=str, help='Output path with file name (*.dtb)')
 
     # unpack command
@@ -203,7 +203,7 @@ def main():
                 out_file = os.path.splitext(os.path.basename(in_file))[0] + ".dtb"
             else:
                 out_file = args.dtb_file.lstrip()
-            pack(in_file, out_file, args.version, args.lc_version, args.cpu_id, args.phandle)
+            pack(in_file, out_file, args.version, args.lc_version, args.cpu_id, args.phandles)
 
         elif args.command == 'unpack':
             in_file = args.dtb_file[0]

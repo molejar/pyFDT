@@ -7,7 +7,6 @@ def test_header():
     header = fdt.Header()
     header.version = fdt.Header.MAX_VERSION
 
-    assert header.magic == fdt.Header.MAGIC_NUMBER
     assert header.version == fdt.Header.MAX_VERSION
     assert header.size == fdt.Header.MAX_SIZE
 
@@ -17,7 +16,6 @@ def test_header():
     blob = struct.pack('>7I', fdt.Header.MAGIC_NUMBER, 0, 0, 0, 0, 1, 1)
     header = fdt.Header.parse(blob)
 
-    assert header.magic == fdt.Header.MAGIC_NUMBER
     assert header.version == 1
     assert header.size == 32
 

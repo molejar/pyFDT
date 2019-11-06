@@ -23,8 +23,13 @@ from .misc import is_string, line_offset
 # Helper methods
 ########################################################################################################################
 
-def new_property(name, raw_value):
-    """ Instantiate property with raw value type """
+def new_property(name: str, raw_value: bytes) -> object:
+    """
+    Instantiate property with raw value type
+
+    :param name: Property name
+    :param raw_value: Property raw data
+    """
     if is_string(raw_value):
         obj = PropStrings(name)
         # Extract strings from raw value
@@ -71,7 +76,7 @@ class BaseItem:
             node = node.parent
         return path if path else '/'
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         """ 
         BaseItem constructor
         
@@ -86,7 +91,7 @@ class BaseItem:
         """ String representation """
         return f"{self.name}"
 
-    def set_name(self, value):
+    def set_name(self, value: str):
         """ 
         Set item name
         
@@ -105,10 +110,10 @@ class BaseItem:
         assert isinstance(value, Node)
         self._parent = value
 
-    def to_dts(self, tabsize=4, depth=0):
+    def to_dts(self, tabsize: int = 4, depth: int = 0):
         raise NotImplementedError()
 
-    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
+    def to_dtb(self, strings: str, pos: int = 0, version: int = Header.MAX_VERSION):
         raise NotImplementedError()
 
 
@@ -130,12 +135,23 @@ class Property(BaseItem):
         """ Get object copy """
         return Property(self.name)
 
-    def to_dts(self, tabsize=4, depth=0):
-        """ Get dts string representation """
+    def to_dts(self, tabsize: int = 4, depth: int = 0):
+        """
+        Get string representation
+
+        :param tabsize: Tabulator size in count of spaces
+        :param depth: Start depth for line
+        """
         return line_offset(tabsize, depth, '{};\n'.format(self.name))
 
-    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """ Get blob representation """
+    def to_dtb(self, strings: str, pos: int = 0, version: int = Header.MAX_VERSION):
+        """
+        Get binary blob representation
+
+        :param strings:
+        :param pos:
+        :param version:
+        """
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
             strpos = len(strings)
@@ -151,7 +167,7 @@ class PropStrings(Property):
     def value(self):
         return self.data[0] if self.data else None
 
-    def __init__(self, name, *args):
+    def __init__(self, name: str, *args):
         """ 
         PropStrings constructor
         
@@ -165,7 +181,7 @@ class PropStrings(Property):
 
     def __str__(self):
         """ String representation """
-        return "{} = {}".format(self.name, self.data)
+        return f"{self.name} = {self.data}"
 
     def __len__(self):
         """ Get strings count """
@@ -177,11 +193,7 @@ class PropStrings(Property):
 
     def __eq__(self, obj):
         """ Check PropStrings object equality """
-        if not isinstance(obj, PropStrings):
-            return False
-        if self.name != obj.name:
-            return False
-        if len(self) != len(obj):
+        if not isinstance(obj, PropStrings) or self.name != obj.name or len(self) != len(obj):
             return False
         for index in range(len(self)):
             if self.data[index] != obj[index]:
@@ -192,29 +204,40 @@ class PropStrings(Property):
         """ Get object copy """
         return PropStrings(self.name, *self.data)
 
-    def append(self, value):
+    def append(self, value: str):
         assert isinstance(value, str)
         assert len(value) > 0, "Invalid strings value"
         assert all(c in printable or c in ('\r', '\n') for c in value), "Invalid chars in strings value"
         self.data.append(value)
 
-    def pop(self, index):
+    def pop(self, index: int):
         assert 0 <= index < len(self.data), "Index out of range"
         return self.data.pop(index)
 
     def clear(self):
         self.data.clear()
 
-    def to_dts(self, tabsize=4, depth=0):
-        """ Get dts string representation """
+    def to_dts(self, tabsize: int = 4, depth: int = 0):
+        """
+        Get string representation
+
+        :param tabsize: Tabulator size in count of spaces
+        :param depth: Start depth for line
+        """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = "'
         result += '", "'.join(self.data)
         result += '";\n'
         return result
 
-    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """Get dtb blob representation"""
+    def to_dtb(self, strings: str, pos: int = 0, version: int = Header.MAX_VERSION):
+        """
+        Get blob representation
+
+        :param strings:
+        :param pos:
+        :param version:
+        """
         blob = pack('')
         for chars in self.data:
             blob += chars.encode('ascii') + pack('b', 0)
@@ -254,7 +277,7 @@ class PropWords(Property):
 
     def __str__(self):
         """ String representation """
-        return "{} = {}".format(self.name, self.data)
+        return f"{self.name} = {self.data}"
 
     def __getitem__(self, index):
         """ Get word by index """
@@ -293,24 +316,35 @@ class PropWords(Property):
     def clear(self):
         self.data.clear()
 
-    def to_dts(self, tabsize=4, depth=0):
-        """ Get dts representation """
+    def to_dts(self, tabsize: int = 4, depth: int = 0):
+        """
+        Get string representation
+
+        :param tabsize: Tabulator size in count of spaces
+        :param depth: Start depth for line
+        """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = <'
         result += ' '.join(["0x{:X}".format(word) for word in self.data])
         result += ">;\n"
         return result
 
-    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """ Get dtb blob representation """
+    def to_dtb(self, strings: str, pos: int = 0, version: int = Header.MAX_VERSION):
+        """
+        Get blob representation
+
+        :param strings:
+        :param pos:
+        :param version:
+        """
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
             strpos = len(strings)
             strings += self.name + '\0'
-        blob  = pack('>III', DTB_PROP, len(self.data) * 4, strpos)
+        blob = pack('>III', DTB_PROP, len(self.data) * 4, strpos)
         for word in self.data:
             blob += pack('>I', word)
-        pos  += len(blob)
+        pos += len(blob)
         return blob, strings, pos
 
 
@@ -332,7 +366,7 @@ class PropBytes(Property):
 
     def __str__(self):
         """ String representation """
-        return "{} = {}".format(self.name, self.data)
+        return f"{self.name} = {self.data}"
 
     def __getitem__(self, index):
         """Get byte by index """
@@ -371,20 +405,26 @@ class PropBytes(Property):
     def clear(self):
         self.data = bytearray()
 
-    def to_dts(self, tabsize=4, depth=0):
-        """ Get DTS representation """
+    def to_dts(self, tabsize: int = 4, depth: int = 0):
+        """
+        Get string representation
+
+        :param tabsize: Tabulator size in count of spaces
+        :param depth: Start depth for line
+        """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = ['
         result += ' '.join(["{:02X}".format(byte) for byte in self.data])
         result += '];\n'
         return result
 
-    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
-        """ Get DTB representation
+    def to_dtb(self, strings: str, pos: int = 0, version: int = Header.MAX_VERSION):
+        """
+        Get blob representation
+
         :param strings:
         :param pos:
         :param version:
-        :return
         """
         strpos = strings.find(self.name + '\0')
         if strpos < 0:
@@ -432,12 +472,12 @@ class PropIncBin(PropBytes):
         """ Create a copy of object """
         return PropIncBin(self.name, self.data, self.file_name, self.relative_path)
 
-    def to_dts(self, tabsize=4, depth=0):
-        """ 
-        Get DTS representation
-        
-        :param tabsize: Count of spaces for tabulator size
-        :param depth: Start depth
+    def to_dts(self, tabsize: int = 4, depth: int = 0):
+        """
+        Get string representation
+
+        :param tabsize: Tabulator size in count of spaces
+        :param depth: Start depth for line
         """
         file_path = self.file_name
         if self.relative_path is not None:
@@ -548,7 +588,7 @@ class Node(BaseItem):
             index = self.props.index(old_prop)
             self.props[index] = new_prop
 
-    def get_subnode(self, name):
+    def get_subnode(self, name: str):
         """ 
         Get subnode object by name
 
@@ -559,7 +599,7 @@ class Node(BaseItem):
                 return n
         return None
 
-    def exist_property(self, name):
+    def exist_property(self, name: str) -> bool:
         """ 
         Check if property exist and return True if exist else False
         
@@ -567,7 +607,7 @@ class Node(BaseItem):
         """
         return False if self.get_property(name) is None else True
 
-    def exist_subnode(self, name):
+    def exist_subnode(self, name: str) -> bool:
         """ 
         Check if subnode exist and return True if exist else False
         
@@ -575,7 +615,7 @@ class Node(BaseItem):
         """
         return False if self.get_subnode(name) is None else True
 
-    def remove_property(self, name):
+    def remove_property(self, name: str):
         """ 
         Remove property object by its name.
         
@@ -585,7 +625,7 @@ class Node(BaseItem):
         if item is not None:
             self.props.remove(item)
 
-    def remove_subnode(self, name):
+    def remove_subnode(self, name: str):
         """ 
         Remove subnode object by its name.
         
@@ -617,7 +657,7 @@ class Node(BaseItem):
             item.set_parent(self)
             self.nodes.append(item)
 
-    def merge(self, node_obj, replace=True):
+    def merge(self, node_obj, replace: bool = True):
         """ 
         Merge two nodes
         
@@ -660,20 +700,20 @@ class Node(BaseItem):
             else:
                 self._nodes[index].merge(sub_node, replace)
 
-    def to_dts(self, tabsize=4, depth=0):
+    def to_dts(self, tabsize: int = 4, depth: int = 0) -> str:
         """ 
-        Get NODE in string representation
+        Get string representation of NODE object
         
-        :param tabsize: Count of spaces for tabulator size
-        :param depth: Node depth
+        :param tabsize: Tabulator size in count of spaces
+        :param depth: Start depth for line
         """
         dts  = line_offset(tabsize, depth, self.name + ' {\n')
-        dts += ''.join([prop.to_dts(tabsize, depth + 1) for prop in self._props])
-        dts += ''.join([node.to_dts(tabsize, depth + 1) for node in self._nodes])
+        dts += ''.join(prop.to_dts(tabsize, depth + 1) for prop in self._props)
+        dts += ''.join(node.to_dts(tabsize, depth + 1) for node in self._nodes)
         dts += line_offset(tabsize, depth, "};\n")
         return dts
 
-    def to_dtb(self, strings, pos=0, version=Header.MAX_VERSION):
+    def to_dtb(self, strings: str, pos: int = 0, version: int = Header.MAX_VERSION) -> tuple:
         """ 
         Get NODE in binary blob representation
         

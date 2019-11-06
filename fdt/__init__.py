@@ -20,7 +20,7 @@ from .misc import strip_comments, split_to_lines, get_version_info, extract_stri
 
 __author__  = "Martin Olejar"
 __contact__ = "martin.olejar@gmail.com"
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 __license__ = "Apache 2.0"
 __status__  = "Development"
 __all__     = [
@@ -47,7 +47,7 @@ class ItemType:
     BOTH = 3
 
 
-class FDT(object):
+class FDT:
     """ Flattened Device Tree Class """
 
     @property
@@ -55,6 +55,11 @@ class FDT(object):
         return self.root.empty
 
     def __init__(self, header=None):
+        """
+        FDT class constructor
+
+        :param header:
+        """
         self.entries = []
         self.header = Header() if header is None else header
         self.root = Node('/')
@@ -70,7 +75,7 @@ class FDT(object):
             msg += "{} [{}N, {}P]\n".format(path, len(nodes), len(props))
         return msg
 
-    def get_node(self, path: str, create: bool = False):
+    def get_node(self, path: str, create: bool = False) -> Node:
         """ 
         Get node object from specified path
         
@@ -95,7 +100,7 @@ class FDT(object):
 
         return node
 
-    def get_property(self, name: str, path: str = ''):
+    def get_property(self, name: str, path: str = '') -> Property:
         """ 
         Get property object by name from specified path
         
@@ -104,17 +109,18 @@ class FDT(object):
         """
         return self.get_node(path).get_property(name)
 
-    def set_property(self, name, value, path=''):
+    def set_property(self, name: str, value, path: str = '', create: bool = True):
         """
         Set property object by name
         
         :param name: Property name
         :param value: Property value
-        :param path: Path to sub-node
+        :param path: Path to subnode
+        :param create: If True, not existing nodes will be created
         """
-        self.get_node(path).set_property(name, value)
+        self.get_node(path, create).set_property(name, value)
 
-    def exist_node(self, path: str):
+    def exist_node(self, path: str) -> bool:
         """ 
         Check if <path>/node exist and return True
         
@@ -123,12 +129,12 @@ class FDT(object):
         """
         try:
             self.get_node(path)
-        except:
+        except ValueError:
             return False
         else:
             return True
 
-    def exist_property(self, name: str, path: str = ''):
+    def exist_property(self, name: str, path: str = '') -> bool:
         """ 
         Check if property exist
         
@@ -137,7 +143,7 @@ class FDT(object):
         """
         return self.get_node(path).exist_property(name) if self.exist_node(path) else False
 
-    def remove_node(self, name, path=''):
+    def remove_node(self, name: str, path: str = ''):
         """ 
         Remove node obj by path/name. Raises ValueError if path/name doesn't exist
         
@@ -146,21 +152,21 @@ class FDT(object):
         """
         self.get_node(path).remove_subnode(name)
 
-    def remove_property(self, name, path=''):
+    def remove_property(self, name: str, path: str = ''):
         """ 
         Remove property obj by name. Raises ValueError if path/name doesn't exist
         
         :param name: Property name
-        :param path: Path to sub-node
+        :param path: Path to subnode
         """
         self.get_node(path).remove_property(name)
 
-    def add_item(self, obj, path='', create=True):
+    def add_item(self, obj, path: str = '', create: bool = True):
         """ 
         Add sub-node or property at specified path. Raises ValueError if path doesn't exist
         
         :param obj: The node or property object
-        :param path: The path to sub-node
+        :param path: The path to subnode
         :param create: If True, not existing nodes will be created
         """
         self.get_node(path, create).append(obj)
@@ -200,19 +206,20 @@ class FDT(object):
         :param path: The path to root node
         :param relative: True for relative or False for absolute return path
         """
+        all_nodes = []
+
         node = self.get_node(path)
-        nodes = []
         while True:
-            nodes += node.nodes
+            all_nodes += node.nodes
             current_path = f"{node.path}/{node.name}"
             current_path = current_path.replace('///', '/')
             current_path = current_path.replace('//', '/')
             if path and relative:
                 current_path = current_path.replace(path, '').lstrip('/')
             yield (current_path, node.nodes, node.props)
-            if not nodes: 
+            if not all_nodes:
                 break
-            node = nodes.pop()
+            node = all_nodes.pop()
 
     def merge(self, fdt_obj, replace: bool = True):
         """
@@ -241,36 +248,34 @@ class FDT(object):
 
         self.root.merge(fdt_obj.get_node('/'), replace)
 
-    def update_phandle(self):
-        node = self.root
-        nodes = []
+    def update_phandles(self):
+        all_nodes = []
         phandle_value = 0
         no_phandle_nodes = []
-        while True:
-            nodes += node.nodes
-            if not nodes:
-                break
-            node = nodes.pop()
-            phandle = node.get_property('phandle')
-            linux_phandle = node.get_property('linux,phandle')
-            if phandle is None and linux_phandle is None:
+
+        node = self.root
+        all_nodes += self.root.nodes
+        while all_nodes:
+            props = (node.get_property('phandle'), node.get_property('linux,phandle'))
+            value = None
+            for i, p in enumerate(props):
+                if isinstance(p, PropWords) and isinstance(p.value, int):
+                    value = None if i == 1 and p.value != value else p.value
+            if value is None:
                 no_phandle_nodes.append(node)
-                continue
-            if isinstance(phandle, PropWords):
-                if phandle.value is None:
-                    raise Exception()
-                if phandle_value < phandle.value:
-                    phandle_value = phandle.value
-            if isinstance(linux_phandle, PropWords):
-                if linux_phandle.value is None:
-                    raise Exception()
-                if phandle_value < linux_phandle.value:
-                    phandle_value = linux_phandle.value
+            elif phandle_value < value:
+                phandle_value = value
+            # ...
+            node = all_nodes.pop()
+            all_nodes += node.nodes
+
+        if phandle_value > 0:
+            phandle_value += 1
 
         for node in no_phandle_nodes:
-            phandle_value += 1
             node.set_property('linux,phandle', phandle_value)
             node.set_property('phandle', phandle_value)
+            phandle_value += 1
 
     def to_dts(self, tabsize: int = 4) -> str:
         """
