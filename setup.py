@@ -19,16 +19,9 @@ from setuptools import setup
 from fdt import __version__, __license__, __author__, __contact__
 
 
-def long_description():
-    try:
-        import pypandoc
-
-        readme_path = path.join(path.dirname(__file__), 'README.md')
-        return pypandoc.convert(readme_path, 'rst')
-    except (IOError, ImportError):
-        return (
-            "More on: https://github.com/molejar/pyFDT"
-        )
+def get_long_description():
+    with open(path.join(path.dirname(path.abspath(__file__)), 'README.md'), encoding='utf8') as fp:
+        return fp.read()
 
 
 setup(
@@ -39,13 +32,14 @@ setup(
     author_email=__contact__,
     url='https://github.com/molejar/pyFDT',
     description='Flattened Device Tree Python Module',
-    long_description=long_description(),
-    #long_description_content_type='text/x-rst',
-    #long_description_content_type='text/markdown',
+    long_description=get_long_description(),
+    long_description_content_type='text/markdown',
     python_requires='>=3.6',
     packages=['fdt'],
     classifiers=[
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent',
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',

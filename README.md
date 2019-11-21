@@ -6,13 +6,9 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/fdt.svg)](https://www.python.org)
 
 This python module is usable for manipulation with [Device Tree Data](https://www.devicetree.org/) and primary was 
-created for [i.MX Smart-Boot Tool](https://github.com/molejar/imxsb)
+created for [imxsb tool](https://github.com/molejar/imxsb)
 
 > Some parts in this module have been inspired from: https://github.com/superna9999/pyfdt project.
-
-## Dependencies
-
-- [Python](https://www.python.org) - Python 3.x interpreter
 
 ## Installation
 
@@ -42,7 +38,8 @@ pip install -U -e .
 
 ## Usage
 
-The API of **fdt** module is intuitive and implementing all general requirements for manipulation with FDT Nodes, Properties and dts/dtb files.
+**fdt** module has intuitive and self describing API, what is presented in following example. Many of general requirements 
+for manipulation with FDT Nodes, Properties and dts/dtb files are already implemented.
 
 ```python
   import fdt
@@ -122,7 +119,7 @@ optional arguments:
 
 ```
 
-### $ pydtc unpack [-h] [-s TAB_SIZE] [-o DTS_FILE] dtb_file
+#### $ pydtc unpack [-h] [-s TAB_SIZE] [-o DTS_FILE] dtb_file
 
 Unpack Device Tree from binary blob *.dtb into readable text file *.dts
 
