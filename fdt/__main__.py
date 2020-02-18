@@ -64,7 +64,7 @@ def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int
     """
 
     if version is not None and version > fdt.Header.MAX_VERSION:
-        raise Exception(f"DTB Version must be lover or equal {fdt.Header.MAX_VERSION} !")
+        raise Exception("DTB Version must be lover or equal {} !".format(fdt.Header.MAX_VERSION))
 
     fdt_obj = parse_fdt(in_file, 'dts')
     if update_phandles:
@@ -74,7 +74,7 @@ def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int
     with open(out_file, 'wb') as f:
         f.write(raw_data)
 
-    print(f" DTB saved as: {out_file}")
+    print(" DTB saved as: {}".format(out_file))
 
 
 def unpack(in_file: str, out_file: str, tab_size):
@@ -90,7 +90,7 @@ def unpack(in_file: str, out_file: str, tab_size):
     with open(out_file, 'w') as f:
         f.write(fdt_obj.to_dts(tab_size))
 
-    print(f" DTS saved as: {out_file}")
+    print(" DTS saved as: {}".format(out_file))
 
 
 def merge(out_file: str, in_files: list, file_type: str, tab_size: int):
@@ -114,7 +114,7 @@ def merge(out_file: str, in_files: list, file_type: str, tab_size: int):
     with open(out_file, 'w') as f:
         f.write(fdt_obj.to_dts(tab_size))
 
-    print(f" Output saved as: {out_file}")
+    print(" Output saved as: {}".format(out_file))
 
 
 def diff(in_file1: str, in_file2: str, file_type: str, out_dir: str):
@@ -151,7 +151,7 @@ def diff(in_file1: str, in_file2: str, file_type: str, out_dir: str):
             with open(os.path.join(out_dir, file_name[index]), 'w') as f:
                 f.write(obj.to_dts())
 
-    print(f" Diff output saved into: {out_dir}")
+    print(" Diff output saved into: {}".format(out_dir))
 
 
 ########################################################################################################################
