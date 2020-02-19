@@ -89,7 +89,7 @@ class BaseItem:
 
     def __str__(self):
         """ String representation """
-        return f"{self.name}"
+        return "{}".format(self.name)
 
     def set_name(self, value: str):
         """ 
@@ -181,7 +181,7 @@ class PropStrings(Property):
 
     def __str__(self):
         """ String representation """
-        return f"{self.name} = {self.data}"
+        return "{} = {}".format(self.name, self.data)
 
     def __len__(self):
         """ Get strings count """
@@ -277,7 +277,7 @@ class PropWords(Property):
 
     def __str__(self):
         """ String representation """
-        return f"{self.name} = {self.data}"
+        return "{} = {}".format(self.name, self.data)
 
     def __getitem__(self, index):
         """ Get word by index """
@@ -366,7 +366,7 @@ class PropBytes(Property):
 
     def __str__(self):
         """ String representation """
-        return f"{self.name} = {self.data}"
+        return "{} = {}".format(self.name, self.data)
 
     def __getitem__(self, index):
         """Get byte by index """

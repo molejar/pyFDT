@@ -46,7 +46,7 @@ class Header:
     @version.setter
     def version(self, value):
         if value > self.MAX_VERSION:
-            raise ValueError(f"Invalid Version {value}, use: 0 - 17 !")
+            raise ValueError("Invalid Version {}, use: 0 - 17 !".format(value))
         # update size and padding
         self._size = self.MIN_SIZE
         if value >= 2:
@@ -136,7 +136,7 @@ class Header:
         if magic_number != cls.MAGIC_NUMBER:
             raise Exception('Invalid Magic Number')
         if header.last_comp_version > cls.MAX_VERSION - 1:
-            raise Exception(f'Invalid last compatible Version {header.last_comp_version}')
+            raise Exception('Invalid last compatible Version {}'.format(header.last_comp_version))
 
         if header.version >= 2:
             header.boot_cpuid_phys = unpack_from('>I', data, offset)[0]

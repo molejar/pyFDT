@@ -211,7 +211,7 @@ class FDT:
         node = self.get_node(path)
         while True:
             all_nodes += node.nodes
-            current_path = f"{node.path}/{node.name}"
+            current_path = "{}/{}".format(node.path, node.name)
             current_path = current_path.replace('///', '/')
             current_path = current_path.replace('//', '/')
             if path and relative:
