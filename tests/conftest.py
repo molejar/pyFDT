@@ -6,7 +6,7 @@ import pytest
 def data_dir():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
     if not os.path.exists(data_dir):
-        raise Exception(f"Directory doesnt exist: {data_dir}")
+        raise Exception("Directory doesnt exist: {}".format(data_dir))
     return data_dir
 
 
