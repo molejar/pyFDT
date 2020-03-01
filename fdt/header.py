@@ -98,7 +98,7 @@ class Header:
         :return:
         """
         if self.version is None:
-            raise Exception("Header Version must be specified !")
+            raise Exception("Header version must be specified !")
 
         blob = pack('>7I', self.MAGIC_NUMBER, self.total_size, self.off_dt_struct, self.off_dt_strings,
                     self.off_mem_rsvmap, self.version, self.last_comp_version)

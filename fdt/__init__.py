@@ -443,8 +443,8 @@ def parse_dtb(data: bytes, offset: int = 0) -> FDT:
     """
     Parse FDT Binary Blob and create FDT Object
     
-    :param data: FDT Binary Blob as bytes or bytearray
-    :param offset:
+    :param data: FDT Binary Blob in bytes
+    :param offset: The offset of input data
     """
     assert isinstance(data, (bytes, bytearray)), "Invalid argument type"
 

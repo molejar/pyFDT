@@ -34,9 +34,10 @@ setup(
     description='Flattened Device Tree Python Module',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
-    python_requires='>=3.6',
+    python_requires='>=3.5',
     packages=['fdt'],
     classifiers=[
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',

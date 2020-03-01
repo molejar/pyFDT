@@ -21,15 +21,19 @@ import argparse
 
 
 ########################################################################################################################
-# Header Functions
+# Helper Functions
 ########################################################################################################################
 def parse_fdt(file_path: str, file_type: str):
     """
     Parse *.dtb ot *.dts input file and return FDT object
 
-    :param file_path: The path to file
+    :param file_path: The path to input file
     :param file_type: File type 'dtb', 'dts' or 'auto'
     """
+
+    if not os.path.exists(file_path):
+        raise Exception('File doesnt exist: {}'.format(file_path))
+
     if file_type == 'auto':
         if file_path.endswith(".dtb"):
             file_type = 'dtb'
@@ -53,7 +57,7 @@ def parse_fdt(file_path: str, file_type: str):
 ########################################################################################################################
 def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int, update_phandles: bool):
     """
-    The pack command function.
+    The implementation of pack command.
 
     :param in_file: Input File Path
     :param out_file: Output File Path
@@ -79,7 +83,7 @@ def pack(in_file: str, out_file: str, version: int, lc_version: int, cpu_id: int
 
 def unpack(in_file: str, out_file: str, tab_size):
     """
-    The unpack command function.
+    The implementation of unpack command.
 
     :param in_file: Input File Path
     :param out_file: Output File Path
@@ -95,7 +99,7 @@ def unpack(in_file: str, out_file: str, tab_size):
 
 def merge(out_file: str, in_files: list, file_type: str, tab_size: int):
     """
-    The merge command function.
+    The implementation of merge command.
 
     :param out_file: Output File Path
     :param in_files: Input Files Path
@@ -119,7 +123,7 @@ def merge(out_file: str, in_files: list, file_type: str, tab_size: int):
 
 def diff(in_file1: str, in_file2: str, file_type: str, out_dir: str):
     """
-    The merge command function.
+    The implementation of diff command.
 
     :param in_file1: Input File1 Path
     :param in_file2: Input File2 Path
