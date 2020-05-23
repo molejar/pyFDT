@@ -351,18 +351,19 @@ class PropWords(Property):
 class PropBytes(Property):
     """Property with bytes as value"""
 
-    def __init__(self, name, data=None):
+    def __init__(self, name, *args, data=None):
         """ 
         PropBytes constructor
         
         :param name: Property name
+        :param args: byte0, byte1, ...
         :param data: Data as list, bytes or bytearray
         """
         super().__init__(name)
-        self.data = bytearray() 
+        self.data = bytearray(args)
         if data:
             assert isinstance(data, (list, bytes, bytearray))
-            self.data = bytearray(data)
+            self.data += bytearray(data)
 
     def __str__(self):
         """ String representation """

@@ -67,14 +67,32 @@ for manipulation with FDT Nodes, Properties and dts/dtb files are already implem
       f.write(dt2.to_dtb(version=17))
 
   #-----------------------------------------------
-  # Add Property and Node into dt2
+  # add new Node into dt2
   # ----------------------------------------------
-  node = fdt.Node('test_node')
+  # create node instance
+  node = fdt.Node('test_node1')
+  
+  # add properties
   node.append(fdt.Property('basic_property'))
   node.append(fdt.PropStrings('string_property', 'value1', 'value2'))
-  node.append(fdt.PropWords('words_property', 0x1000, 0x80000000))
-  node.append(fdt.PropBytes('bytes_property', data=[0, 200, 12]))
+  node.append(fdt.PropWords('words_property', 0x80000000))
+  node.append(fdt.PropBytes('bytes_property', 0x00, 0x01, 0x02))
+  
+  # PropBytes constructor take also complex data object as bytes() or bytearray()
+  node.append(fdt.PropBytes('bytes_property2', data=b"\x00\x01\x02"))
+  
+  # add created node into root path of dt2
   dt2.add_item(node)
+  
+  # use set_property method to update or create new property
+  dt2.set_property('words_property', [0, 1], path='/test_node1')
+  dt2.set_property('bytes_property', b"\x00\x01", path='/test_node1')
+  dt2.set_property('string_property', ['value1', 'value2', 'value3'], path='/test_node1')  
+  
+  # use search method for find all string properties and then update it
+  items = dt2.search("", itype=fdt.ItemType.PROP_STRINGS, path="/test_node1")
+  for item in items:
+    item.data = ['value1', 'value2']
   
   #-----------------------------------------------
   # merge dt2 into dt1

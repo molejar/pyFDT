@@ -44,7 +44,13 @@ __all__     = [
 class ItemType:
     NODE = 0
     PROP = 1
-    BOTH = 3
+    # Specific property type
+    PROP_BASE = 5
+    PROP_WORDS = 6
+    PROP_BYTES = 7
+    PROP_STRINGS = 8
+    # All types
+    ALL = 100
 
 
 class FDT:
@@ -171,29 +177,39 @@ class FDT:
         """
         self.get_node(path, create).append(obj)
 
-    def search(self, name: str, itype: int = ItemType.BOTH, path: str = '') -> list:
+    def search(self, name: str, itype: int = ItemType.ALL, path: str = '', recursive: bool = True) -> list:
         """ 
         Search properties and/or nodes with specified name. Return list of founded items
         
-        :param name: Property or Node name
-        :param itype: Item type - NODE, PROP or BOTH
+        :param name: The Property or Node name. If empty "", all nodes or properties will selected
+        :param itype: Item type - NODE, PROP, PROP_BASE, PROP_WORDS, PROP_BYTES, PROP_STRINGS or ALL
         :param path: Path to root node
+        :param recursive: Search in all sub-nodes (default: True)
         """
         assert isinstance(name, str), "Property name must be a string type !"
 
         node = self.get_node(path)
         nodes = []
         items = []
+        pclss = {
+            ItemType.PROP_BASE: Property,
+            ItemType.PROP_BYTES: PropBytes,
+            ItemType.PROP_WORDS: PropWords,
+            ItemType.PROP_STRINGS: PropStrings
+        }
         while True:
             nodes += node.nodes
-            if itype == ItemType.NODE or itype == ItemType.BOTH:
-                if node.name == name:
+            if itype == ItemType.NODE or itype == ItemType.ALL:
+                if not name or node.name == name:
                     items.append(node)
-            if itype == ItemType.PROP or itype == ItemType.BOTH:
+            if itype != ItemType.NODE or itype == ItemType.ALL:
                 for p in node.props:
-                    if p.name == name:
-                        items.append(p)
-            if not nodes:
+                    if name and p.name != name:
+                        continue
+                    if itype in pclss and type(p) is not pclss[itype]:
+                        continue
+                    items.append(p)
+            if not recursive or not nodes:
                 break
             node = nodes.pop()
 
@@ -216,7 +232,7 @@ class FDT:
             current_path = current_path.replace('//', '/')
             if path and relative:
                 current_path = current_path.replace(path, '').lstrip('/')
-            yield (current_path, node.nodes, node.props)
+            yield current_path, node.nodes, node.props
             if not all_nodes:
                 break
             node = all_nodes.pop()
