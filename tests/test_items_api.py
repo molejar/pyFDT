@@ -144,7 +144,7 @@ def test_node():
                         fdt.Property('prop'),
                         fdt.PropStrings('prop_str', 'test', 'test'),
                         fdt.PropWords('prop_word', 0x11111111, 0x55555555),
-                        fdt.PropBytes('prop_byte', [0x10, 0x50]),
+                        fdt.PropBytes('prop_byte', 0x10, 0x50),
                         fdt.Node('subnode0',
                                  fdt.Property('prop0'),
                                  fdt.PropStrings('prop_str0', 'test'),

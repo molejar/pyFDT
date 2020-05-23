@@ -392,7 +392,7 @@ class PropBytes(Property):
 
     def copy(self):
         """ Create a copy of object """
-        return PropBytes(self.name, self.data)
+        return PropBytes(self.name, data=self.data)
 
     def append(self, value):
         assert isinstance(value, int), "Invalid object type"
