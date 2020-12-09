@@ -226,7 +226,7 @@ class PropStrings(Property):
         """
         result  = line_offset(tabsize, depth, self.name)
         result += ' = "'
-        result += '", "'.join(self.data)
+        result += '", "'.join([item.replace('"', '\\"') for item in self.data])
         result += '";\n'
         return result
 
