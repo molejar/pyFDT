@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from struct import unpack, pack
+from struct import pack, Struct
 from string import printable
 
 from .header import Header, DTB_PROP, DTB_BEGIN_NODE, DTB_END_NODE
 from .misc import is_string, line_offset
 
+BIGENDIAN_WORD = Struct(">I")
 
 ########################################################################################################################
 # Helper methods
@@ -41,11 +42,10 @@ def new_property(name: str, raw_value: bytes) -> object:
     elif len(raw_value) and len(raw_value) % 4 == 0:
         obj = PropWords(name)
         # Extract words from raw value
-        for i in range(0, len(raw_value), 4):
-            obj.append(unpack(">I", raw_value[i:i + 4])[0])
+        obj.data = [BIGENDIAN_WORD.unpack(raw_value[i:i + 4])[0] for i in range(0, len(raw_value), 4)]
         return obj
 
-    elif len(raw_value) and len(raw_value):
+    elif len(raw_value):
         return PropBytes(name, data=raw_value)
 
     else:
@@ -342,8 +342,7 @@ class PropWords(Property):
             strpos = len(strings)
             strings += self.name + '\0'
         blob = pack('>III', DTB_PROP, len(self.data) * 4, strpos)
-        for word in self.data:
-            blob += pack('>I', word)
+        blob += bytes().join([BIGENDIAN_WORD.pack(word) for word in self.data])
         pos += len(blob)
         return blob, strings, pos
 
