@@ -316,13 +316,35 @@ class FDT:
             result += self.root.to_dts(tabsize)
         return result
 
-    def to_dtb(self, version: int = None, last_comp_version: int = None, boot_cpuid_phys: int = None) -> bytes:
+    def to_dtb(self, version: int = None, last_comp_version: int = None, boot_cpuid_phys: int = None, strings: str = None) -> bytes:
         """
         Export FDT Object into Binary Blob format (DTB)
 
         :param version:
         :param last_comp_version:
         :param boot_cpuid_phys:
+        :param strings:
+
+        The strings param is useful (only) when manipulating a signed itb or dtb.  The signature includes
+        the strings buffer in the dtb _in order_.  C executables write the strings out in a surprising order.
+        The argument is used as an initial version of the strings buffer, so that all strings in the input
+        file are included (and in the same order) in the output file.  Usage:
+
+            # Read and parse dtb
+            with open(input, 'rb') as file:
+                data = file.read()
+            dtree = fdt.parse_dtb(data)
+
+            # Read strings buffer (Assumes version >= 3)
+            strings_start = dtree.header.off_dt_strings
+            strings_end = strings_start + dtree.header.size_dt_strings
+            strings = data[strings_start:strings_end].decode("ascii")
+
+            # Serialize dtb and write to output
+            data = dtree.to_dtb(strings=strings)
+            with open(output, 'wb') as file:
+                file.write(data)
+
         """
         if self.root is None:
             return b''
@@ -337,6 +359,8 @@ class FDT:
             self.header.boot_cpuid_phys = boot_cpuid_phys
         if self.header.version is None:
             raise Exception("DTB Version must be specified !")
+        if strings is None:
+            strings = ''
 
         blob_entries = bytes()
         if self.entries:
@@ -344,7 +368,7 @@ class FDT:
                 blob_entries += pack('>QQ', entry['address'], entry['size'])
         blob_entries += pack('>QQ', 0, 0)
         blob_data_start = self.header.size + len(blob_entries)
-        (blob_data, blob_strings, data_pos) = self.root.to_dtb('', blob_data_start, self.header.version)
+        (blob_data, blob_strings, data_pos) = self.root.to_dtb(strings, blob_data_start, self.header.version)
         blob_data += pack('>I', DTB_END)
         self.header.size_dt_strings = len(blob_strings)
         self.header.size_dt_struct = len(blob_data)
