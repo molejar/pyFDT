@@ -414,7 +414,7 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
     for line in dts_lines:
         if line.endswith('{'):
             # start node
-            node_name = line.split()[0]
+            node_name = line.split()[-2]
             new_node = Node(node_name)
             if fdt_obj.root is None:
                 fdt_obj.root = new_node
