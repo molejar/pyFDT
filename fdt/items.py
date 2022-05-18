@@ -63,6 +63,10 @@ class BaseItem:
         return self._name
 
     @property
+    def label(self):
+        return self._label
+
+    @property
     def parent(self):
         return self._parent
 
@@ -85,6 +89,7 @@ class BaseItem:
         assert isinstance(name, str)
         assert all(c in printable for c in name), "The value must contain just printable chars !"
         self._name = name
+        self._label = None
         self._parent = None
 
     def __str__(self):
@@ -100,6 +105,17 @@ class BaseItem:
         assert isinstance(value, str)
         assert all(c in printable for c in value), "The value must contain just printable chars !"
         self._name = value
+
+    def set_label(self, value: str):
+        """ 
+        Set item label
+        
+        :param value: The label in string format
+        """
+        assert isinstance(value, str)
+        assert all(c in printable for c in value), "The value must contain just printable chars !"
+        self._label = value
+
 
     def set_parent(self, value):
         """ 

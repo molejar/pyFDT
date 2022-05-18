@@ -83,7 +83,7 @@ def split_to_lines(text):
             lines.append(mline + line)
             mline = str()
         else:
-            mline += line
+            mline += line + ' '
 
     return lines
 
