@@ -433,8 +433,8 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                 node_name = rest.split()[0]
                 new_node = Node(node_name)
                 new_node.set_label(label)
-                handle = fdt_obj.add_label(label)
-                new_node.set_property('phandle', handle)
+
+                
             else:
                 node_name = line.split()[0]
                 new_node = Node(node_name)
@@ -446,6 +446,10 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
         elif line.endswith('}'):
             # end node
             if curnode is not None:
+                if curnode.get_property('phandle') is None:
+                    if curnode.label is not None:
+                        handle = fdt_obj.add_label(curnode.label)
+                        curnode.set_property('phandle', handle)
                 curnode = curnode.parent
         else:
             # properties
@@ -463,6 +467,14 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                     # just change ',' to ' ' -- to concatenate the values into single array
                     if ',' in prop_value:
                         prop_value = prop_value.replace(',', ' ')
+                    
+                    # keep the orginal references for phandles as a phantom
+                    # property
+                    if "&" in prop_value:
+                        phantom_obj = PropStrings(prop_name+'_with_references')
+                        phantom_obj.append(line[1].lstrip(' '))
+                        if curnode is not None:
+                            curnode.append(phantom_obj)
                     for prop in prop_value.split():
                         if prop.startswith('0x'):
                             prop_obj.append(int(prop, 16))

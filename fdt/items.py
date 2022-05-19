@@ -723,8 +723,16 @@ class Node(BaseItem):
         :param tabsize: Tabulator size in count of spaces
         :param depth: Start depth for line
         """
-        dts  = line_offset(tabsize, depth, self.name + ' {\n')
-        dts += ''.join(prop.to_dts(tabsize, depth + 1) for prop in self._props)
+        if self._label is not None:
+            dts  = line_offset(tabsize, depth, self._label + ': ' + self.name + ' {\n')
+        else:
+            dts  = line_offset(tabsize, depth, self.name + ' {\n')
+        # phantom properties which maintain reference state info
+        # have names ending with _with_references
+        # don't write those out to dts file
+        dts += ''.join(
+            prop.to_dts(tabsize, depth + 1) 
+            for prop in self._props if prop.name.endswith('_with_references') is False)
         dts += ''.join(node.to_dts(tabsize, depth + 1) for node in self._nodes)
         dts += line_offset(tabsize, depth, "};\n")
         return dts
@@ -746,8 +754,11 @@ class Node(BaseItem):
             blob += pack('b', 0) * (4 - (len(blob) % 4))
         pos += len(blob)
         for prop in self._props:
-            (data, strings, pos) = prop.to_dtb(strings, pos, version)
-            blob += data
+            # phantom property too maintain reference state should
+            # not write out to dtb file
+            if prop.name.endswith('_with_references') is False:
+                (data, strings, pos) = prop.to_dtb(strings, pos, version)
+                blob += data
         for node in self._nodes:
             (data, strings, pos) = node.to_dtb(strings, pos, version)
             blob += data
