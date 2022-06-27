@@ -271,7 +271,7 @@ class FDT:
                 exist = False
                 for index in range(len(self.entries)):
                     if self.entries[index]['address'] == in_entry['address']:
-                        self.entries[index]['address'] = in_entry['size']
+                        self.entries[index]['size'] = in_entry['size']
                         exist = True
                         break
                 if not exist:
