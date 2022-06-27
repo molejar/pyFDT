@@ -66,7 +66,7 @@ class FDT:
 
         :param header:
         """
-        self.entries = []
+        self.entries = entries
         self.header = Header() if header is None else header
         self.root = Node('/')
         self.last_handle = 0
