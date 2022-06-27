@@ -60,7 +60,7 @@ class FDT:
     def empty(self):
         return self.root.empty
 
-    def __init__(self, header=None):
+    def __init__(self, header=None, entries=[]):
         """
         FDT class constructor
 
