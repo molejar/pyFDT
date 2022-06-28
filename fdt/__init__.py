@@ -20,7 +20,7 @@ from .misc import strip_comments, split_to_lines, get_version_info, extract_stri
 
 __author__  = "Martin Olejar"
 __contact__ = "martin.olejar@gmail.com"
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 __license__ = "Apache 2.0"
 __status__  = "Development"
 __all__     = [
@@ -512,7 +512,8 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                     for prop in prop_value.split('",'):
                         prop = prop.replace('"', "")
                         prop = prop.strip()
-                        prop_obj.append(prop)
+                        if len(prop) > 0:
+                            prop_obj.append(prop)
             if curnode is not None:
                 curnode.append(prop_obj)
 
