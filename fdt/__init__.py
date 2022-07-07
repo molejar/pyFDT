@@ -20,7 +20,7 @@ from .misc import strip_comments, split_to_lines, get_version_info, extract_stri
 
 __author__  = "Martin Olejar"
 __contact__ = "martin.olejar@gmail.com"
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 __license__ = "Apache 2.0"
 __status__  = "Development"
 __all__     = [
@@ -60,15 +60,19 @@ class FDT:
     def empty(self):
         return self.root.empty
 
-    def __init__(self, header=None):
+    def __init__(self, header=None, entries=[]):
         """
         FDT class constructor
 
         :param header:
         """
-        self.entries = []
+        self.entries = entries
         self.header = Header() if header is None else header
         self.root = Node('/')
+        self.last_handle = 0
+        self.label_to_handle = {}
+        self.handle_to_label = {}
+
 
     def __str__(self):
         """ String representation """
@@ -177,6 +181,17 @@ class FDT:
         """
         self.get_node(path, create).append(obj)
 
+    def add_label(self, label):
+        ''' track labels/references to convert to phandles
+            adds label with incrmenting handle to dictionary if not alread present
+            returns handle for which can be used to replace the reference'''
+        if label in self.label_to_handle:
+            return self.label_to_handle[label]
+        self.last_handle += 1
+        self.label_to_handle[label] = self.last_handle
+        self.handle_to_label[self.last_handle] = label
+        return self.last_handle
+
     def search(self, name: str, itype: int = ItemType.ALL, path: str = '', recursive: bool = True) -> list:
         """ 
         Search properties and/or nodes with specified name. Return list of founded items
@@ -256,7 +271,7 @@ class FDT:
                 exist = False
                 for index in range(len(self.entries)):
                     if self.entries[index]['address'] == in_entry['address']:
-                        self.entries[index]['address'] = in_entry['size']
+                        self.entries[index]['size'] = in_entry['size']
                         exist = True
                         break
                 if not exist:
@@ -266,7 +281,6 @@ class FDT:
 
     def update_phandles(self):
         all_nodes = []
-        phandle_value = 0
         no_phandle_nodes = []
 
         node = self.root
@@ -279,19 +293,19 @@ class FDT:
                     value = None if i == 1 and p.value != value else p.value
             if value is None:
                 no_phandle_nodes.append(node)
-            elif phandle_value < value:
-                phandle_value = value
             # ...
             node = all_nodes.pop()
             all_nodes += node.nodes
 
-        if phandle_value > 0:
-            phandle_value += 1
-
         for node in no_phandle_nodes:
-            node.set_property('linux,phandle', phandle_value)
-            node.set_property('phandle', phandle_value)
-            phandle_value += 1
+            if node.name != '/':
+                if node.path == '/':   
+                    phandle_value = self.add_label(node.name)
+                else:
+                    phandle_value = self.add_label(node.path+'/'+node.name)
+                node.set_property('linux,phandle', phandle_value)
+                node.set_property('phandle', phandle_value)
+
 
     def to_dts(self, tabsize: int = 4) -> str:
         """
@@ -414,8 +428,16 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
     for line in dts_lines:
         if line.endswith('{'):
             # start node
-            node_name = line.split()[0]
-            new_node = Node(node_name)
+            if ':' in line:  #indicates the present of a label
+                label, rest = line.split(':')
+                node_name = rest.split()[0]
+                new_node = Node(node_name)
+                new_node.set_label(label)
+
+                
+            else:
+                node_name = line.split()[0]
+                new_node = Node(node_name)
             if fdt_obj.root is None:
                 fdt_obj.root = new_node
             if curnode is not None:
@@ -424,6 +446,10 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
         elif line.endswith('}'):
             # end node
             if curnode is not None:
+                if curnode.get_property('phandle') is None:
+                    if curnode.label is not None:
+                        handle = fdt_obj.add_label(curnode.label)
+                        curnode.set_property('phandle', handle)
                 curnode = curnode.parent
         else:
             # properties
@@ -437,6 +463,18 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                 if prop_value.startswith('<'):
                     prop_obj = PropWords(prop_name)
                     prop_value = prop_value.replace('<', '').replace('>', '')
+                    # ['interrupts ' = ' <0 5 4>, <0 6 4>']
+                    # just change ',' to ' ' -- to concatenate the values into single array
+                    if ',' in prop_value:
+                        prop_value = prop_value.replace(',', ' ')
+                    
+                    # keep the orginal references for phandles as a phantom
+                    # property
+                    if "&" in prop_value:
+                        phantom_obj = PropStrings(prop_name+'_with_references')
+                        phantom_obj.append(line[1].lstrip(' '))
+                        if curnode is not None:
+                            curnode.append(phantom_obj)
                     for prop in prop_value.split():
                         if prop.startswith('0x'):
                             prop_obj.append(int(prop, 16))
@@ -444,6 +482,8 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                             prop_obj.append(int(prop, 2))
                         elif prop.startswith('0'):
                             prop_obj.append(int(prop, 8))
+                        elif prop.startswith('&'):
+                            prop_obj.append(fdt_obj.add_label(prop[1:]))
                         else:
                             prop_obj.append(int(prop))
                 elif prop_value.startswith('['):
@@ -472,7 +512,8 @@ def parse_dts(text: str, root_dir: str = '') -> FDT:
                     for prop in prop_value.split('",'):
                         prop = prop.replace('"', "")
                         prop = prop.strip()
-                        prop_obj.append(prop)
+                        if len(prop) > 0:
+                            prop_obj.append(prop)
             if curnode is not None:
                 curnode.append(prop_obj)
 
