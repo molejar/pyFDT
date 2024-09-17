@@ -330,7 +330,7 @@ class FDT:
             result += self.root.to_dts(tabsize)
         return result
 
-    def to_dtb(self, version: int = None, last_comp_version: int = None, boot_cpuid_phys: int = None, strings: str = None) -> bytes:
+    def to_dtb(self, version: int = None, last_comp_version: int = None, boot_cpuid_phys: int = None, strings: str = None, padding: int = 0) -> bytes:
         """
         Export FDT Object into Binary Blob format (DTB)
 
@@ -338,6 +338,7 @@ class FDT:
         :param last_comp_version:
         :param boot_cpuid_phys:
         :param strings:
+        :param padding:
 
         The strings param is useful (only) when manipulating a signed itb or dtb.  The signature includes
         the strings buffer in the dtb _in order_.  C executables write the strings out in a surprising order.
@@ -367,6 +368,8 @@ class FDT:
 
         if version is not None:
             self.header.version = version
+        if padding < 0:
+            raise Exception("DTB padding must be >= 0 !")
         if last_comp_version is not None:
             self.header.last_comp_version = last_comp_version
         if boot_cpuid_phys is not None:
@@ -389,9 +392,9 @@ class FDT:
         self.header.off_mem_rsvmap = self.header.size
         self.header.off_dt_struct = blob_data_start
         self.header.off_dt_strings = blob_data_start + len(blob_data)
-        self.header.total_size = blob_data_start + len(blob_data) + len(blob_strings)
+        self.header.total_size = blob_data_start + len(blob_data) + len(blob_strings) + padding
         blob_header = self.header.export()
-        return blob_header + blob_entries + blob_data + blob_strings.encode('ascii')
+        return blob_header + blob_entries + blob_data + blob_strings.encode('ascii') + (b'\x00' * padding)
 
 
 def parse_dts(text: str, root_dir: str = '') -> FDT:
