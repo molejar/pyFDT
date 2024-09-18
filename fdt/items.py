@@ -466,7 +466,7 @@ class PropIncBin(PropBytes):
         :param file_name: File name
         :param rpath: Relative path
         """
-        super().__init__(name, data)
+        super().__init__(name, data=data)
         self.file_name = file_name
         self.relative_path = rpath
 
